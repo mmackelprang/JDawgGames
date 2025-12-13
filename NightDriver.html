@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Night Driver Style</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #gameCanvas {
+      background: #000;
+      border: 2px solid #0f0;
+      margin-top: 10px;
+    }
+    #info {
+      margin-top: 5px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Night Driver Style</h1>
+  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <div id="info">
+    Left/Right: steer &nbsp; Up/Down: accelerate/brake &nbsp; R: restart
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // Gameplay parameters (tuned to feel like a classic early racer)
+    let running = true;
+    let timeElapsed = 0;          // seconds
+    let bestTime = 0;
+    let speed = 0;                // units per second (road speed)
+    let targetSpeed = 0;
+    const maxSpeed = 60;
+    const accel = 40;             // how fast we reach target speed
+    const decel = 80;
+    let steering = 0;             // -1..1
+    const steerRate = 2.5;        // steering responsiveness
+
+    // Road model: centerline angle and lateral offset curve
+    let roadSegments = [];
+    const segmentLength = 25;     // world distance per segment
+    const visibleDepth = 40;      // how many segments to draw
+    const baseRoadWidth = 0.5;    // world units (relative)
+    let roadOffset = 0;           // lateral offset of road center
+    let roadAngle = 0;            // current heading in radians
+    let distanceTravelled = 0;    // along road
+
+    // Difficulty evolution
+    let curveIntensity = 0.4;     // max curvature
+    let curveTimer = 0;
+    let curveDuration = 2000;     // ms per curve change
+    let currentCurve = 0;         // signed curvature
+    let roadNarrowFactor = 1.0;
+
+    // Input
+    const keys = {
+      left: false,
+      right: false,
+      up: false,
+      down: false
+    };
+
+    // Simple pseudo-3D projection helpers
+    function projectPoint(worldX, worldZ) {
+      // Camera at (0, cameraY, 0), looking down +Z
+      const cameraY = 1.0;
+      const near = 0.1;
+      const far = 100.0;
+
+      let z = worldZ;
+      if (z < near) z = near;
+      if (z > far) return null;
+
+      const fov = 90 * Math.PI / 180;
+      const scale = H / (2 * Math.tan(fov / 2));
+
+      const sx = W / 2 + (worldX * scale) / z;
+      const sy = H - ((cameraY * scale) / z); // horizon near top
+
+      return { x: sx, y: sy, z };
+    }
+
+    // Build/extend road as list of segments: each has angle and lateral offset
+    function initRoad() {
+      roadSegments = [];
+      roadOffset = 0;
+      roadAngle = 0;
+      distanceTravelled = 0;
+      curveIntensity = 0.3;
+      roadNarrowFactor = 1.0;
+
+      // Fill some initial straight segments
+      let angle = 0;
+      let offset = 0;
+      for (let i = 0; i < 200; i++) {
+        roadSegments.push({ angle, offset });
+      }
+    }
+
+    function extendRoadIfNeeded() {
+      // Ensure enough segments ahead of the current position
+      const needed = Math.ceil((distanceTravelled / segmentLength) + visibleDepth + 10);
+      while (roadSegments.length < needed) {
+        const last = roadSegments[roadSegments.length - 1];
+        const newAngle = last.angle + currentCurve * 0.02;
+        const newOffset = last.offset; // keep centered; edges provide challenge
+        roadSegments.push({ angle: newAngle, offset: newOffset });
+      }
+    }
+
+    function updateCurve(dt) {
+      curveTimer += dt;
+      if (curveTimer >= curveDuration) {
+        curveTimer = 0;
+        // Choose a new curve: straight, gentle left, or gentle right
+        const r = Math.random();
+        if (r < 0.3) currentCurve = 0;
+        else if (r < 0.65) currentCurve = curveIntensity;
+        else currentCurve = -curveIntensity;
+
+        // Gradually increase difficulty by making curves tighter and road narrower
+        curveIntensity = Math.min(0.9, curveIntensity + 0.02);
+        roadNarrowFactor = Math.max(0.5, roadNarrowFactor - 0.02);
+      }
+    }
+
+    function updateSpeed(dt) {
+      const dtSec = dt / 1000;
+      if (keys.up) targetSpeed = maxSpeed;
+      else if (keys.down) targetSpeed = 0;
+      else targetSpeed = maxSpeed * 0.6;
+
+      if (speed < targetSpeed) {
+        speed += accel * dtSec;
+        if (speed > targetSpeed) speed = targetSpeed;
+      } else if (speed > targetSpeed) {
+        speed -= decel * dtSec;
+        if (speed < targetSpeed) speed = targetSpeed;
+      }
+    }
+
+    function updateSteering(dt) {
+      const dtSec = dt / 1000;
+      let steerInput = 0;
+      if (keys.left) steerInput -= 1;
+      if (keys.right) steerInput += 1;
+
+      steering += steerInput * steerRate * dtSec;
+      if (steering > 1) steering = 1;
+      if (steering < -1) steering = -1;
+    }
+
+    function update(dt) {
+      if (!running) return;
+
+      updateSpeed(dt);
+      updateSteering(dt);
+      updateCurve(dt);
+
+      const dtSec = dt / 1000;
+      const dist = speed * dtSec;
+      distanceTravelled += dist;
+      timeElapsed += dtSec;
+
+      extendRoadIfNeeded();
+
+      // Determine which segment we are on
+      const segIndex = Math.floor(distanceTravelled / segmentLength);
+      const seg = roadSegments[segIndex] || roadSegments[roadSegments.length - 1];
+      roadAngle = seg.angle;
+      roadOffset = seg.offset;
+
+      // Collision with road edges: if absolute steering too large vs road width
+      const roadWidth = baseRoadWidth * roadNarrowFactor;
+      const carOffset = steering * (roadWidth * 0.8); // car position within road
+
+      if (Math.abs(carOffset) > roadWidth * 0.5) {
+        // Crash
+        running = false;
+        if (timeElapsed > bestTime) bestTime = timeElapsed;
+      }
+    }
+
+    function drawRoad() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Draw simple stars / night sky
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, H * 0.4, W, H * 0.6);
+
+      const roadWidthBase = baseRoadWidth * roadNarrowFactor;
+
+      const cameraZ = 0;
+      const stepZ = segmentLength;
+
+      let zAcc = cameraZ + segmentLength;
+      const carOffset = steering * (roadWidthBase * 0.8);
+
+      for (let i = 0; i < visibleDepth; i++) {
+        const index = Math.floor(distanceTravelled / segmentLength) + i;
+        const seg = roadSegments[index];
+        if (!seg) continue;
+
+        const t = i / visibleDepth;
+        const width = roadWidthBase * (1 - t * 0.7);
+
+        // World coordinates for road center at this depth
+        const angle = seg.angle;
+        const centerX = roadOffset + carOffset; // car offset within road
+
+        const leftX = centerX - width * 0.5;
+        const rightX = centerX + width * 0.5;
+
+        const zNear = zAcc;
+        const zFar = zAcc + stepZ;
+
+        const p1 = projectPoint(leftX, zNear);
+        const p2 = projectPoint(rightX, zNear);
+        const p3 = projectPoint(rightX, zFar);
+        const p4 = projectPoint(leftX, zFar);
+
+        if (!p1 || !p2 || !p3 || !p4) {
+          zAcc += stepZ;
+          continue;
+        }
+
+        // Road surface
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.lineTo(p4.x, p4.y);
+        ctx.closePath();
+        ctx.fillStyle = "#222";
+        ctx.fill();
+
+        // Road side reflectors: small white posts on each side, spaced out
+        if (i % 3 === 0) {
+          const postSize = 0.03;
+          const postLeft = projectPoint(leftX - postSize, zNear);
+          const postRight = projectPoint(rightX + postSize, zNear);
+          if (postLeft) {
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(postLeft.x - 2, postLeft.y - 6, 4, 12);
+          }
+          if (postRight) {
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(postRight.x - 2, postRight.y - 6, 4, 12);
+          }
+        }
+
+        zAcc += stepZ;
+      }
+
+      // Draw car silhouette at bottom center (fixed)
+      ctx.fillStyle = "#0f0";
+      const carWidth = 40;
+      const carHeight = 60;
+      ctx.fillRect(W / 2 - carWidth / 2, H - carHeight - 10, carWidth, carHeight);
+    }
+
+    function drawHUD() {
+      ctx.fillStyle = "#0f0";
+      ctx.font = "16px monospace";
+      ctx.textAlign = "left";
+
+      const speedDisplay = Math.round(speed);
+      const dir =
+        steering < -0.1 ? "LEFT" :
+        steering > 0.1 ? "RIGHT" : "STRAIGHT";
+
+      ctx.fillText(`Speed: ${speedDisplay}`, 10, 20);
+      ctx.fillText(`Steer: ${dir}`, 10, 40);
+      ctx.fillText(`Time: ${timeElapsed.toFixed(1)}s`, 10, 60);
+      ctx.fillText(`Best: ${bestTime.toFixed(1)}s`, 10, 80);
+
+      if (!running) {
+        ctx.textAlign = "center";
+        ctx.font = "24px monospace";
+        ctx.fillText("CRASH!", W / 2, H / 2 - 20);
+        ctx.font = "16px monospace";
+        ctx.fillText("Press R to restart", W / 2, H / 2 + 10);
+      }
+    }
+
+    function loop(timestamp) {
+      if (!loop.lastTime) loop.lastTime = timestamp;
+      const dt = timestamp - loop.lastTime;
+      loop.lastTime = timestamp;
+
+      update(dt);
+      drawRoad();
+      drawHUD();
+
+      requestAnimationFrame(loop);
+    }
+
+    // Input handlers
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "ArrowLeft") { keys.left = true; e.preventDefault(); }
+      if (e.code === "ArrowRight") { keys.right = true; e.preventDefault(); }
+      if (e.code === "ArrowUp") { keys.up = true; e.preventDefault(); }
+      if (e.code === "ArrowDown") { keys.down = true; e.preventDefault(); }
+      if (e.code === "KeyR") {
+        running = true;
+        timeElapsed = 0;
+        speed = 0;
+        steering = 0;
+        distanceTravelled = 0;
+        curveTimer = 0;
+        currentCurve = 0;
+        initRoad();
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowLeft") { keys.left = false; e.preventDefault(); }
+      if (e.code === "ArrowRight") { keys.right = false; e.preventDefault(); }
+      if (e.code === "ArrowUp") { keys.up = false; e.preventDefault(); }
+      if (e.code === "ArrowDown") { keys.down = false; e.preventDefault(); }
+    });
+
+    initRoad();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
