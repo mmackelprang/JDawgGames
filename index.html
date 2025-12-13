@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JDawg Games - Classic Arcade Games</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            max-width: 900px;
+            padding: 40px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .game-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .game-card h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+        .game-card p {
+            margin-bottom: 20px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        .game-card a {
+            display: inline-block;
+            background: #fff;
+            color: #667eea;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .game-card a:hover {
+            background: #764ba2;
+            color: #fff;
+            transform: scale(1.05);
+        }
+        .footer {
+            margin-top: 50px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 JDawg Games</h1>
+        <p class="subtitle">Classic Arcade Games Collection</p>
+        
+        <div class="games-grid">
+            <div class="game-card">
+                <h2>🏎️ Night Driver</h2>
+                <p>Race through the night! Steer your car down a winding road at high speed. Classic early racing game action.</p>
+                <a href="NightDriver.html">Play Now</a>
+            </div>
+            
+            <div class="game-card">
+                <h2>👾 Pac-Man</h2>
+                <p>Navigate the maze, eat all the pellets, and avoid the ghosts! A faithful recreation of the arcade classic.</p>
+                <a href="pacman.html">Play Now</a>
+            </div>
+            
+            <div class="game-card">
+                <h2>🛸 Space Invaders</h2>
+                <p>Defend Earth from waves of alien invaders! Move, shoot, and survive in this retro space shooter.</p>
+                <a href="spaceinvaders.html">Play Now</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Created for Jonathan Watkins (aka JDawg)</strong></p>
+            <p>From Grandpa Mark with love ❤️</p>
+            <p>Enjoy these classic games!</p>
+        </div>
+    </div>
+</body>
+</html>
