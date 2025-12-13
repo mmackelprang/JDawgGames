@@ -12,15 +12,88 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     #gameCanvas {
       background: #000;
       border: 2px solid #0f0;
       margin-top: 10px;
+      touch-action: none;
     }
     #info {
       margin-top: 5px;
       text-align: center;
+    }
+    #touchControls {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 200px;
+      pointer-events: none;
+    }
+    .touch-btn {
+      position: absolute;
+      background: rgba(0, 255, 0, 0.2);
+      border: 2px solid rgba(0, 255, 0, 0.5);
+      border-radius: 10px;
+      color: #0f0;
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    .touch-btn:active {
+      background: rgba(0, 255, 0, 0.4);
+    }
+    #leftBtn {
+      left: 10px;
+      bottom: 10px;
+      width: 80px;
+      height: 80px;
+    }
+    #rightBtn {
+      left: 100px;
+      bottom: 10px;
+      width: 80px;
+      height: 80px;
+    }
+    #accelBtn {
+      right: 100px;
+      bottom: 10px;
+      width: 80px;
+      height: 80px;
+    }
+    #brakeBtn {
+      right: 10px;
+      bottom: 10px;
+      width: 80px;
+      height: 80px;
+    }
+    #restartBtn {
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 110px;
+      width: 100px;
+      height: 60px;
+      display: none;
+    }
+    @media (max-width: 768px) {
+      #touchControls {
+        display: block;
+      }
+      #gameCanvas {
+        width: 100vw;
+        height: calc(100vh - 220px);
+      }
     }
   </style>
 </head>
@@ -29,6 +102,13 @@
   <canvas id="gameCanvas" width="480" height="640"></canvas>
   <div id="info">
     Left/Right: steer &nbsp; Up/Down: accelerate/brake &nbsp; R: restart
+  </div>
+  <div id="touchControls">
+    <div class="touch-btn" id="leftBtn">◄</div>
+    <div class="touch-btn" id="rightBtn">►</div>
+    <div class="touch-btn" id="accelBtn">▲</div>
+    <div class="touch-btn" id="brakeBtn">▼</div>
+    <div class="touch-btn" id="restartBtn">R</div>
   </div>
 
   <script>
@@ -73,6 +153,17 @@
       up: false,
       down: false
     };
+
+    // Show restart button when game is over (for touch devices)
+    function showRestartButton() {
+      const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      if (isTouchDevice) {
+        const restartBtn = document.getElementById("restartBtn");
+        if (restartBtn) {
+          restartBtn.style.display = 'flex';
+        }
+      }
+    }
 
     // Simple pseudo-3D projection helpers
     function projectPoint(worldX, worldZ) {
@@ -192,6 +283,7 @@
         // Crash
         running = false;
         if (timeElapsed > bestTime) bestTime = timeElapsed;
+        showRestartButton();
       }
     }
 
@@ -336,6 +428,95 @@
       if (e.code === "ArrowUp") { keys.up = false; e.preventDefault(); }
       if (e.code === "ArrowDown") { keys.down = false; e.preventDefault(); }
     });
+
+    // Touch controls
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    
+    function setupTouchControls() {
+      const leftBtn = document.getElementById("leftBtn");
+      const rightBtn = document.getElementById("rightBtn");
+      const accelBtn = document.getElementById("accelBtn");
+      const brakeBtn = document.getElementById("brakeBtn");
+      const restartBtn = document.getElementById("restartBtn");
+
+      // Left button
+      leftBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keys.left = true;
+      });
+      leftBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keys.left = false;
+      });
+      leftBtn.addEventListener("touchcancel", (e) => {
+        e.preventDefault();
+        keys.left = false;
+      });
+
+      // Right button
+      rightBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keys.right = true;
+      });
+      rightBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keys.right = false;
+      });
+      rightBtn.addEventListener("touchcancel", (e) => {
+        e.preventDefault();
+        keys.right = false;
+      });
+
+      // Accelerate button
+      accelBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keys.up = true;
+      });
+      accelBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keys.up = false;
+      });
+      accelBtn.addEventListener("touchcancel", (e) => {
+        e.preventDefault();
+        keys.up = false;
+      });
+
+      // Brake button
+      brakeBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keys.down = true;
+      });
+      brakeBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keys.down = false;
+      });
+      brakeBtn.addEventListener("touchcancel", (e) => {
+        e.preventDefault();
+        keys.down = false;
+      });
+
+      // Restart button
+      restartBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        running = true;
+        timeElapsed = 0;
+        speed = 0;
+        steering = 0;
+        distanceTravelled = 0;
+        curveTimer = 0;
+        currentCurve = 0;
+        initRoad();
+        restartBtn.style.display = 'none';
+      });
+    }
+
+    // Initialize touch controls if on a touch device
+    if (isTouchDevice) {
+      setupTouchControls();
+      // Update info text for touch devices
+      const infoDiv = document.getElementById("info");
+      infoDiv.textContent = "Use on-screen buttons to control • Touch R to restart";
+    }
 
     initRoad();
     requestAnimationFrame(loop);
