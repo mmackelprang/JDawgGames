@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mini Pac-Man Clone</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+      font-family: sans-serif;
+    }
+    #wrapper {
+      text-align: center;
+    }
+    canvas {
+      background: #000;
+      display: block;
+      margin: 0 auto 8px auto;
+      border: 2px solid #00f;
+      image-rendering: pixelated;
+    }
+    #info {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+<div id="wrapper">
+  <canvas id="game" width="448" height="496"></canvas>
+  <div id="info">
+    <span id="scoreLabel">Score: 0</span>
+    &nbsp;|&nbsp;
+    <span id="statusLabel">Use arrow keys. Eat all pellets!</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  // --- Constants ---
+  const TILE = 16;
+  const COLS = 28;
+  const ROWS = 31;
+  const CANVAS_W = COLS * TILE;
+  const CANVAS_H = ROWS * TILE;
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+
+  const scoreLabel = document.getElementById("scoreLabel");
+  const statusLabel = document.getElementById("statusLabel");
+
+  const COLORS = {
+    wall: "#0031FF",
+    pellet: "#FFB951",
+    power: "#FFFFFF",
+    pacman: "#FFE600",
+    ghost: "#FF0000",
+    tunnel: "#000000"
+  };
+
+  // --- Map (0 empty, 1 wall, 2 pellet, 3 power pellet) ---
+  const MAP_DATA = [
+    "1111111111111111111111111111",
+    "1222222222211112222222222221",
+    "1211112111211112111211112121",
+    "1311112111211112111211112131",
+    "1222222222222222222222222221",
+    "1211112111112111112111112121",
+    "1222222111112222222111112221",
+    "1111112111111111112111111111",
+    "0000012112220000222112000000",
+    "1111112112111111112112111111",
+    "0000002112110000112112000000",
+    "1111112112111111112112111111",
+    "1222222222221222222222222221",
+    "1211112111111111112111112121",
+    "1222222111111222222111112221",
+    "1111112111112111112111111111",
+    "1222222222222222222222222221",
+    "1211112111211112111211112121",
+    "1311112222211112222211112131",
+    "1222222111112222111112222221",
+    "1111112111112112111112111111",
+    "0000012222222002222222000000",
+    "1111112111111111111112111111",
+    "1222222222221222222222222221",
+    "1211112111112111112111112121",
+    "1222222111112222111112222221",
+    "1111112111112112111112111111",
+    "1222222222222222222222222221",
+    "1211112111211112111211112121",
+    "1222222222211112222222222221",
+    "1111111111111111111111111111"
+  ].map(row => row.split("").map(Number));
+
+  // --- Input handling ---
+  const keysDown = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
+  document.addEventListener("keydown", e => {
+    if (e.key in keysDown) {
+      keysDown[e.key] = true;
+      e.preventDefault();
+    }
+  });
+  document.addEventListener("keyup", e => {
+    if (e.key in keysDown) {
+      keysDown[e.key] = false;
+      e.preventDefault();
+    }
+  });
+
+  // --- Helper functions ---
+  function isWall(col, row) {
+    if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return true;
+    return MAP_DATA[row][col] === 1;
+  }
+
+  function pelletsRemaining() {
+    let count = 0;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (MAP_DATA[r][c] === 2 || MAP_DATA[r][c] === 3) count++;
+      }
+    }
+    return count;
+  }
+
+  // --- Entities ---
+  const pacman = {
+    x: 14 * TILE + TILE / 2,
+    y: 23 * TILE + TILE / 2,
+    dirX: 0,
+    dirY: 0,
+    speed: 2,
+    radius: TILE / 2 - 1,
+    mouthAngle: 0.2,
+    mouthDir: 1
+  };
+
+  const ghost = {
+    x: 14 * TILE + TILE / 2,
+    y: 14 * TILE + TILE / 2,
+    dirX: 0,
+    dirY: -1,
+    speed: 1.5,
+    radius: TILE / 2 - 2,
+    changeDirCooldown: 0
+  };
+
+  let score = 0;
+  let gameOver = false;
+  let win = false;
+
+  // power pellet (frightened) state
+  let powerMode = false;
+  let powerTimer = 0;
+  const POWER_DURATION = 60 * 10; // 10 seconds at ~60 FPS
+
+  // respawn ghost far from Pac-Man
+  function resetGhostFarFromPacman() {
+    const candidates = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (!isWall(c, r)) {
+          candidates.push({ c, r });
+        }
+      }
+    }
+
+    const pc = Math.floor(pacman.x / TILE);
+    const pr = Math.floor(pacman.y / TILE);
+
+    const MIN_DIST_TILES = 10;
+    const far = candidates.filter(tile => {
+      const dx = tile.c - pc;
+      const dy = tile.r - pr;
+      return dx * dx + dy * dy >= MIN_DIST_TILES * MIN_DIST_TILES;
+    });
+
+    const pool = far.length ? far : candidates;
+    const choice = pool[Math.floor(Math.random() * pool.length)];
+
+    ghost.x = choice.c * TILE + TILE / 2;
+    ghost.y = choice.r * TILE + TILE / 2;
+    ghost.dirX = 0;
+    ghost.dirY = -1;
+    ghost.changeDirCooldown = 0;
+  }
+
+  // --- Game update ---
+  function update() {
+    if (gameOver || win) return;
+
+    // Pac-Man direction from keys, only change when aligned to grid
+    if (isAlignedToGrid(pacman)) {
+      let desired = { x: pacman.dirX, y: pacman.dirY };
+      if (keysDown.ArrowUp) desired = { x: 0, y: -1 };
+      else if (keysDown.ArrowDown) desired = { x: 0, y: 1 };
+      else if (keysDown.ArrowLeft) desired = { x: -1, y: 0 };
+      else if (keysDown.ArrowRight) desired = { x: 1, y: 0 };
+
+      if (!willHitWall(pacman, desired.x, desired.y)) {
+        pacman.dirX = desired.x;
+        pacman.dirY = desired.y;
+      }
+    }
+
+    moveEntity(pacman, pacman.speed);
+
+    // Wrap tunnels
+    if (pacman.x < -TILE / 2) pacman.x = CANVAS_W + TILE / 2;
+    if (pacman.x > CANVAS_W + TILE / 2) pacman.x = -TILE / 2;
+
+    // Eat pellets and power pellets
+    const pc = Math.floor(pacman.x / TILE);
+    const pr = Math.floor(pacman.y / TILE);
+    if (MAP_DATA[pr] && (MAP_DATA[pr][pc] === 2 || MAP_DATA[pr][pc] === 3)) {
+      if (MAP_DATA[pr][pc] === 3) {
+        // power pellet: ghost becomes vulnerable for 10 seconds
+        score += 50;
+        powerMode = true;
+        powerTimer = POWER_DURATION;
+        statusLabel.textContent = "POWER MODE! Ghost is blue!";
+      } else {
+        score += 10;
+      }
+      MAP_DATA[pr][pc] = 0;
+      scoreLabel.textContent = "Score: " + score;
+      if (pelletsRemaining() === 0) {
+        win = true;
+        statusLabel.textContent = "You win! Refresh to play again.";
+      }
+    }
+
+    // Power mode countdown (~10 seconds)
+    if (powerMode) {
+      powerTimer--;
+      if (powerTimer <= 0) {
+        powerMode = false;
+        statusLabel.textContent = "Power over. Avoid the ghost!";
+      }
+    }
+
+    // Ghost AI: always chase Pac-Man (or flee when in power mode)
+    if (isAlignedToGrid(ghost)) {
+      const dirs = [
+        { x: 0, y: -1 }, // up
+        { x: 0, y: 1 },  // down
+        { x: -1, y: 0 }, // left
+        { x: 1, y: 0 }   // right
+      ];
+      const options = [];
+
+      for (const d of dirs) {
+        if (!willHitWall(ghost, d.x, d.y)) {
+          if (d.x !== -ghost.dirX || d.y !== -ghost.dirY) {
+            options.push(d);
+          }
+        }
+      }
+      if (options.length === 0) {
+        for (const d of dirs) {
+          if (!willHitWall(ghost, d.x, d.y)) options.push(d);
+        }
+      }
+
+      if (options.length) {
+        let bestDir = options[0];
+        let bestScore = -Infinity;
+
+        for (const d of options) {
+          const nx = ghost.x + d.x * TILE;
+          const ny = ghost.y + d.y * TILE;
+          const dx = pacman.x - nx;
+          const dy = pacman.y - ny;
+          const distSq = dx * dx + dy * dy;
+
+          // when not powered, minimize distance; when powered, maximize
+          const score = powerMode ? distSq : -distSq;
+          if (score > bestScore) {
+            bestScore = score;
+            bestDir = d;
+          }
+        }
+
+        ghost.dirX = bestDir.x;
+        ghost.dirY = bestDir.y;
+      }
+    }
+
+    moveEntity(ghost, ghost.speed);
+
+    // Ghost tunnel wrap
+    if (ghost.x < -TILE / 2) ghost.x = CANVAS_W + TILE / 2;
+    if (ghost.x > CANVAS_W + TILE / 2) ghost.x = -TILE / 2;
+
+    // Check collision Pac-Man vs ghost
+    const dx = pacman.x - ghost.x;
+    const dy = pacman.y - ghost.y;
+    const distSq = dx * dx + dy * dy;
+    const minDist = pacman.radius + ghost.radius - 2;
+    if (distSq < minDist * minDist) {
+      if (powerMode) {
+        // eat the blue ghost within the 10-second window
+        score += 200;
+        scoreLabel.textContent = "Score: " + score;
+        resetGhostFarFromPacman();
+        powerMode = false;
+        statusLabel.textContent = "Ghost eaten!";
+      } else {
+        gameOver = true;
+        statusLabel.textContent = "Game over! Refresh to try again.";
+      }
+    }
+
+    // Pac-Man mouth animation
+    pacman.mouthAngle += 0.02 * pacman.mouthDir;
+    if (pacman.mouthAngle > 0.35) pacman.mouthDir = -1;
+    if (pacman.mouthAngle < 0.05) pacman.mouthDir = 1;
+  }
+
+  function isAlignedToGrid(e) {
+    return Math.abs((e.x % TILE) - TILE / 2) < 0.5 &&
+           Math.abs((e.y % TILE) - TILE / 2) < 0.5;
+  }
+
+  function willHitWall(e, dirX, dirY) {
+    const nx = e.x + dirX * e.speed;
+    const ny = e.y + dirY * e.speed;
+    const left   = Math.floor((nx - e.radius) / TILE);
+    const right  = Math.floor((nx + e.radius) / TILE);
+    const top    = Math.floor((ny - e.radius) / TILE);
+    const bottom = Math.floor((ny + e.radius) / TILE);
+    return (
+      isWall(left, top) || isWall(right, top) ||
+      isWall(left, bottom) || isWall(right, bottom)
+    );
+  }
+
+  function moveEntity(e, speed) {
+    if (!willHitWall(e, e.dirX, e.dirY)) {
+      e.x += e.dirX * speed;
+      e.y += e.dirY * speed;
+    } else {
+      e.dirX = 0;
+      e.dirY = 0;
+    }
+  }
+
+  // --- Drawing ---
+  function draw() {
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Draw map
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = MAP_DATA[r][c];
+        const x = c * TILE;
+        const y = r * TILE;
+
+        if (tile === 1) {
+          ctx.fillStyle = COLORS.wall;
+          ctx.fillRect(x, y, TILE, TILE);
+        } else {
+          ctx.fillStyle = COLORS.tunnel;
+          ctx.fillRect(x, y, TILE, TILE);
+          if (tile === 2) {
+            ctx.fillStyle = COLORS.pellet;
+            ctx.beginPath();
+            ctx.arc(x + TILE / 2, y + TILE / 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (tile === 3) {
+            ctx.fillStyle = COLORS.power;
+            ctx.beginPath();
+            ctx.arc(x + TILE / 2, y + TILE / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    // Draw Pac-Man
+    ctx.fillStyle = COLORS.pacman;
+    const angle = pacman.mouthAngle * Math.PI;
+    const dirAngle = directionToAngle(pacman.dirX, pacman.dirY);
+    ctx.beginPath();
+    ctx.moveTo(pacman.x, pacman.y);
+    ctx.arc(
+      pacman.x,
+      pacman.y,
+      pacman.radius,
+      dirAngle + angle,
+      dirAngle + Math.PI * 2 - angle
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw ghost (red normally, blue when vulnerable)
+    ctx.fillStyle = powerMode ? "#0000FF" : COLORS.ghost;
+    drawGhost(ghost.x, ghost.y, ghost.radius);
+
+    requestAnimationFrame(loop);
+  }
+
+  function directionToAngle(dx, dy) {
+    if (dx === 1) return 0;
+    if (dx === -1) return Math.PI;
+    if (dy === -1) return -Math.PI / 2;
+    if (dy === 1) return Math.PI / 2;
+    return 0;
+  }
+
+  function drawGhost(x, y, r) {
+    const w = r * 2;
+    const h = r * 2;
+    ctx.beginPath();
+    ctx.arc(x, y, r, Math.PI, 0);
+    ctx.lineTo(x + r, y + r);
+    for (let i = 0; i < 4; i++) {
+      const xx = x + r - (w / 4) * i - w / 8;
+      const yy = y + r + (i % 2 === 0 ? 0 : 3);
+      ctx.quadraticCurveTo(xx, yy, xx - w / 4, y + r);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // eyes
+    ctx.fillStyle = "#FFF";
+    ctx.beginPath();
+    ctx.arc(x - r / 3, y - r / 4, r / 4, 0, Math.PI * 2);
+    ctx.arc(x + r / 3, y - r / 4, r / 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#00F";
+    ctx.beginPath();
+    ctx.arc(x - r / 3, y - r / 4, r / 8, 0, Math.PI * 2);
+    ctx.arc(x + r / 3, y - r / 4, r / 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // --- Main loop ---
+  let lastTime = 0;
+  function loop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const dt = timestamp - lastTime;
+    if (dt > 1000 / 60) {
+      update();
+      lastTime = timestamp;
+    }
+    draw();
+  }
+
+  statusLabel.textContent = "Use arrow keys. Eat pellets; power dots let you eat the blue ghost!";
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
