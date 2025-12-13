@@ -92,6 +92,7 @@
       }
       #gameCanvas {
         width: 100vw;
+        /* 220px = 200px touch controls height + 20px for margins/padding */
         height: calc(100vh - 220px);
       }
     }
@@ -146,6 +147,9 @@
     let currentCurve = 0;         // signed curvature
     let roadNarrowFactor = 1.0;
 
+    // Device detection
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     // Input
     const keys = {
       left: false,
@@ -156,7 +160,6 @@
 
     // Show restart button when game is over (for touch devices)
     function showRestartButton() {
-      const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
       if (isTouchDevice) {
         const restartBtn = document.getElementById("restartBtn");
         if (restartBtn) {
@@ -429,9 +432,7 @@
       if (e.code === "ArrowDown") { keys.down = false; e.preventDefault(); }
     });
 
-    // Touch controls
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    
+    // Touch controls setup
     function setupTouchControls() {
       const leftBtn = document.getElementById("leftBtn");
       const rightBtn = document.getElementById("rightBtn");
@@ -515,7 +516,7 @@
       setupTouchControls();
       // Update info text for touch devices
       const infoDiv = document.getElementById("info");
-      infoDiv.textContent = "Use on-screen buttons to control • Touch R to restart";
+      infoDiv.textContent = "Use on-screen buttons to steer and accelerate";
     }
 
     initRoad();
