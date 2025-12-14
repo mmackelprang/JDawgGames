@@ -1,0 +1,28 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Courier New', monospace; /* Arcade-style font */
+    background-color: #0d0d0d; /* Very dark background */
+    color: #00ff44; /* Retro green text */
+    padding-top: 20px;
+}
+
+h1 {
+    margin-bottom: 10px;
+    text-shadow: 0 0 5px #00ff44;
+}
+
+#controls {
+    margin-bottom: 15px;
+    font-size: 14px;
+    text-align: center;
+    border: 1px solid #00ff44;
+    padding: 5px 10px;
+}
+
+#pongCanvas {
+    border: 2px solid #00ff44;
+    background-color: black;
+    box-shadow: 0 0 20px #00ff44; /* Glow effect */
+}
