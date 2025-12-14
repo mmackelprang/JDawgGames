@@ -57,11 +57,22 @@
     const bullets = [];
 
     let gameOver = false;
+    
+    // Game statistics
+    let startTime = Date.now();
+    let robbersShot = 0;
+    let robbersStomped = 0;
+    let robbersGotAway = 0;
 
     const keys = {};
     document.addEventListener("keydown", e => {
       if (e.code === "ArrowUp" || e.code === "Space") e.preventDefault();
       keys[e.code] = true;
+      
+      // Restart game with R key
+      if (e.code === "KeyR" && gameOver) {
+        restartGame();
+      }
     });
     document.addEventListener("keyup", e => {
       keys[e.code] = false;
@@ -119,6 +130,7 @@
       for (let e of enemies) {
         e.x -= e.speed;
         if (e.x + e.w < 0) {
+          robbersGotAway++;
           e.x = canvas.width + Math.random() * 200;
           e.speed = 3 + Math.random() * 2;
         }
@@ -164,6 +176,7 @@
 
         if (stomping) {
           // Kill enemy and bounce player up
+          robbersStomped++;
           enemies.splice(i, 1);
           spawnEnemy();
           player.vy = -10;
@@ -181,6 +194,7 @@
         for (let j = enemies.length - 1; j >= 0; j--) {
           const e = enemies[j];
           if (rectsOverlap(b, e)) {
+            robbersShot++;
             bullets.splice(i, 1);
             enemies.splice(j, 1);
             spawnEnemy();
@@ -224,6 +238,21 @@
         ctx.fillRect(b.x, b.y, b.w, b.h);
       });
     }
+    
+    function drawStats() {
+      const timePlaying = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(timePlaying / 60);
+      const seconds = timePlaying % 60;
+      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      ctx.fillStyle = "black";
+      ctx.font = "16px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText(`Time: ${timeStr}`, 10, 20);
+      ctx.fillText(`Shot: ${robbersShot}`, 10, 40);
+      ctx.fillText(`Stomped: ${robbersStomped}`, 10, 60);
+      ctx.fillText(`Got Away: ${robbersGotAway}`, 10, 80);
+    }
 
     function drawGameOver() {
       if (!gameOver) return;
@@ -232,9 +261,47 @@
       ctx.fillStyle = "white";
       ctx.font = "40px Arial";
       ctx.textAlign = "center";
-      ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+      ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 60);
+      
       ctx.font = "20px Arial";
-      ctx.fillText("Refresh the page to play again", canvas.width / 2, canvas.height / 2 + 40);
+      const timePlaying = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(timePlaying / 60);
+      const seconds = timePlaying % 60;
+      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      ctx.fillText(`Time Played: ${timeStr}`, canvas.width / 2, canvas.height / 2 - 10);
+      ctx.fillText(`Robbers Shot: ${robbersShot}`, canvas.width / 2, canvas.height / 2 + 20);
+      ctx.fillText(`Robbers Stomped: ${robbersStomped}`, canvas.width / 2, canvas.height / 2 + 50);
+      ctx.fillText(`Robbers Got Away: ${robbersGotAway}`, canvas.width / 2, canvas.height / 2 + 80);
+      
+      ctx.font = "24px Arial";
+      ctx.fillText("Press R to restart", canvas.width / 2, canvas.height / 2 + 130);
+    }
+    
+    function restartGame() {
+      // Reset player
+      player.x = 80;
+      player.y = groundY - 60;
+      player.vy = 0;
+      player.jumping = false;
+      player.lastVy = 0;
+      
+      // Reset enemies
+      enemies.length = 0;
+      for (let i = 0; i < 4; i++) spawnEnemy();
+      
+      // Reset bullets
+      bullets.length = 0;
+      
+      // Reset stats
+      startTime = Date.now();
+      robbersShot = 0;
+      robbersStomped = 0;
+      robbersGotAway = 0;
+      
+      // Reset game state
+      gameOver = false;
+      attackCooldown = 0;
     }
 
     function loop() {
@@ -254,6 +321,7 @@
       drawPlayer();
       drawEnemies();
       drawBullets();
+      drawStats();
       drawGameOver();
 
       requestAnimationFrame(loop);
