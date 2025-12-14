@@ -29,6 +29,11 @@ Defend Earth from waves of alien invaders! Move your ship and shoot down the ali
 - **Play:** [spaceinvaders.html](spaceinvaders.html)
 - **Controls:** Arrow keys to move, Space to shoot, R to restart
 
+### 🦔 Sonic Robber Run
+Run, jump, and shoot your way through this fast-paced endless runner! Avoid or destroy the robbers coming your way.
+- **Play:** [Sonic.html](Sonic.html)
+- **Controls:** Arrow Up/W to jump, Space to shoot
+
 ## 🌐 Play Online
 
 Visit the GitHub Pages site to play all games:  

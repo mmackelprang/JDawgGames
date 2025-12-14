@@ -28,6 +28,12 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **Controls:** Arrow keys to move, Space to shoot, R to restart
 - **Play:** [Space Invaders](spaceinvaders.html)
 
+### Sonic Robber Run
+- **File:** `Sonic.html`
+- **Description:** Run, jump, and shoot your way through this fast-paced endless runner! Avoid or destroy the robbers coming your way.
+- **Controls:** Arrow Up/W to jump, Space to shoot
+- **Play:** [Sonic Robber Run](Sonic.html)
+
 ---
 
 ## How to Add a New Game
