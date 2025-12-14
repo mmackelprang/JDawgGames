@@ -49,10 +49,16 @@ export class Road {
         // Simple fixed camera Y for a flat road
         const cameraY = 1400; 
 
-        // Sort segments from far to near for correct rendering (painters algorithm)
-        this.segments.sort((a, b) => b.z - a.z);
-
-        for (let i = 0; i < this.segments.length - 1; i++) {
+        // Calculate which segment the player is on
+        const baseSegment = Math.floor(playerZ / this.segmentLength);
+        
+        // Draw segments from far to near (painters algorithm)
+        // Draw a range of segments ahead of the player
+        const drawDistance = 200; // Number of segments to draw ahead
+        
+        for (let i = baseSegment + drawDistance; i >= baseSegment; i--) {
+            if (i < 0 || i >= this.segments.length - 1) continue;
+            
             const current = this.segments[i];
             const next = this.segments[i + 1];
 
@@ -68,7 +74,7 @@ export class Road {
                 playerX, cameraY, playerZ
             );
             
-            // Optimization: Stop drawing if segments are behind the camera (z <= 0)
+            // Optimization: Skip if both points are behind camera (AND condition)
             if (p1.z <= 0 && p2.z <= 0) continue; 
             
             // --- DRAWING: Trapezoid Road ---
