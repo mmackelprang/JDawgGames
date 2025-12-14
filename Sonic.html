@@ -239,16 +239,18 @@
       });
     }
     
-    function drawStats() {
+    function formatTime() {
       const timePlaying = Math.floor((Date.now() - startTime) / 1000);
       const minutes = Math.floor(timePlaying / 60);
       const seconds = timePlaying % 60;
-      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    function drawStats() {
       ctx.fillStyle = "black";
       ctx.font = "16px Arial";
       ctx.textAlign = "left";
-      ctx.fillText(`Time: ${timeStr}`, 10, 20);
+      ctx.fillText(`Time: ${formatTime()}`, 10, 20);
       ctx.fillText(`Shot: ${robbersShot}`, 10, 40);
       ctx.fillText(`Stomped: ${robbersStomped}`, 10, 60);
       ctx.fillText(`Got Away: ${robbersGotAway}`, 10, 80);
@@ -264,12 +266,7 @@
       ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 60);
       
       ctx.font = "20px Arial";
-      const timePlaying = Math.floor((Date.now() - startTime) / 1000);
-      const minutes = Math.floor(timePlaying / 60);
-      const seconds = timePlaying % 60;
-      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      
-      ctx.fillText(`Time Played: ${timeStr}`, canvas.width / 2, canvas.height / 2 - 10);
+      ctx.fillText(`Time Played: ${formatTime()}`, canvas.width / 2, canvas.height / 2 - 10);
       ctx.fillText(`Robbers Shot: ${robbersShot}`, canvas.width / 2, canvas.height / 2 + 20);
       ctx.fillText(`Robbers Stomped: ${robbersStomped}`, canvas.width / 2, canvas.height / 2 + 50);
       ctx.fillText(`Robbers Got Away: ${robbersGotAway}`, canvas.width / 2, canvas.height / 2 + 80);
