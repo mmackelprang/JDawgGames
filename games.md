@@ -8,7 +8,13 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **File:** `NightDriver.html`
 - **Description:** Race through the night! Steer your car down a winding road at high speed. Classic early racing game action.
 - **Controls:** Left/Right arrows to steer, Up/Down to accelerate/brake, R to restart
-- **Play:** [Night Driver](NightDriver.html)
+- **Play:** [Night Driver](NightDriver/index.html)
+
+### Pong
+- **File:** `pong/index.html`
+- **Description:** Play the classic arcade Pong game.
+- **Controls:** Follow instructions on the screen
+- **Play:** [Pong](pong/index.html)
 
 ### Pac-Man
 - **File:** `pacman.html`
