@@ -2,6 +2,9 @@
 import { Road } from './road.js';
 import { Controls } from './controls.js';
 
+// --- Constants ---
+const ROAD_SAFE_ZONE_DIVISOR = 2.5; // Determines collision boundary (roadWidth / divisor)
+
 // --- Game State (Easily Extensible) ---
 const state = {
     playerZ: 0, // Player position down the road
@@ -60,8 +63,7 @@ function loop() {
         }
         
         // Collision Detection: Check if player is off the road
-        // Use 40% of road width as the safe zone (road.roadWidth / 2.5)
-        const roadEdgeLimit = road.roadWidth / 2.5;
+        const roadEdgeLimit = road.roadWidth / ROAD_SAFE_ZONE_DIVISOR;
         if (Math.abs(state.playerX) > roadEdgeLimit) {
             state.gameOver = true;
             if (state.score > state.highScore) {

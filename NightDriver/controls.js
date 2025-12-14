@@ -57,13 +57,13 @@ export class Controls {
         });
         
         // Add tap-to-restart functionality (tap anywhere on canvas when game is over)
-        // The callback itself checks game state, so this won't interfere with gameplay
         const canvas = document.getElementById('gameCanvas');
         if (canvas) {
             canvas.addEventListener('touchstart', (e) => {
-                // Only call restart if callback exists
+                // Only call restart if callback exists and touch is on canvas
                 // The callback in game.js checks state.gameOver before actually restarting
-                if (this.onRestart) {
+                // This prevents interference with mobile steering controls (which are separate divs)
+                if (e.target === canvas && this.onRestart) {
                     this.onRestart();
                 }
             });
