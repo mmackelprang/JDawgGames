@@ -3,6 +3,7 @@ export class Controls {
     constructor() {
         this.isLeft = false;
         this.isRight = false;
+        this.onRestart = null; // Callback for restart action
         this.setupKeyboard();
         this.setupTouch();
     }
@@ -11,6 +12,10 @@ export class Controls {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft' || e.key === 'a') this.isLeft = true;
             if (e.key === 'ArrowRight' || e.key === 'd') this.isRight = true;
+            if (e.key === ' ' && this.onRestart) {
+                e.preventDefault();
+                this.onRestart();
+            }
         });
         document.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowLeft' || e.key === 'a') this.isLeft = false;
@@ -50,5 +55,15 @@ export class Controls {
              this.isLeft = false;
              this.isRight = false;
         });
+        
+        // Add tap-to-restart functionality (tap anywhere on canvas)
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) {
+            canvas.addEventListener('touchstart', (e) => {
+                if (this.onRestart) {
+                    this.onRestart();
+                }
+            });
+        }
     }
 }

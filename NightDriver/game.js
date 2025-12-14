@@ -10,7 +10,10 @@ const state = {
     maxSpeed: 100,
     acceleration: 2,
     steering: 10,
-    // EXTENSIBILITY: Add score, highscore, fuel, etc.
+    gameOver: false,
+    score: 0,
+    highScore: 0,
+    // EXTENSIBILITY: Add fuel, etc.
 };
 
 // --- Initialization ---
@@ -19,27 +22,55 @@ const ctx = canvas.getContext('2d');
 const road = new Road(ctx, canvas.width, canvas.height);
 const controls = new Controls();
 
+// Set up restart callback
+controls.onRestart = () => {
+    if (state.gameOver) {
+        resetGame();
+    }
+};
+
+// Reset game state
+function resetGame() {
+    state.playerZ = 0;
+    state.playerX = 0;
+    state.speed = 0;
+    state.gameOver = false;
+    state.score = 0;
+}
+
 // The main game loop
 function loop() {
     // 1. UPDATE LOGIC
-    // Simple acceleration (always accelerating for Night Driver feel)
-    state.speed = Math.min(state.maxSpeed, state.speed + state.acceleration / 60);
+    if (!state.gameOver) {
+        // Simple acceleration (always accelerating for Night Driver feel)
+        state.speed = Math.min(state.maxSpeed, state.speed + state.acceleration / 60);
 
-    // Update Player Z position
-    state.playerZ += state.speed;
+        // Update Player Z position
+        state.playerZ += state.speed;
 
-    // Wrap the track position
-    state.playerZ %= (road.segments.length * road.segmentLength); 
-    
-    // Steering based on controls
-    if (controls.isLeft) {
-        state.playerX -= state.steering;
+        // Wrap the track position
+        state.playerZ %= (road.segments.length * road.segmentLength); 
+        
+        // Steering based on controls
+        if (controls.isLeft) {
+            state.playerX -= state.steering;
+        }
+        if (controls.isRight) {
+            state.playerX += state.steering;
+        }
+        
+        // Collision Detection: Check if player is off the road
+        const roadEdgeLimit = 800; // Maximum allowed X offset (half road width in world units)
+        if (Math.abs(state.playerX) > roadEdgeLimit) {
+            state.gameOver = true;
+            if (state.score > state.highScore) {
+                state.highScore = state.score;
+            }
+        }
+        
+        // Update score based on distance traveled
+        state.score = Math.floor(state.playerZ / 100);
     }
-    if (controls.isRight) {
-        state.playerX += state.steering;
-    }
-    
-    // EXTENSIBILITY: Add Collision Detection, Speed limits, etc.
     
     // 2. RENDER LOGIC
     // Clear the canvas for the new frame
@@ -55,9 +86,32 @@ function loop() {
     // Draw the simple car graphic (fixed at the bottom)
     ctx.fillStyle = 'red';
     ctx.fillRect(canvas.width / 2 - 40, canvas.height - 80, 80, 60);
+    
+    // Draw HUD
     ctx.fillStyle = 'white';
-    ctx.fillText(`Z: ${Math.floor(state.playerZ)}`, 10, 20);
-
+    ctx.font = '16px monospace';
+    ctx.fillText(`Score: ${state.score}`, 10, 20);
+    ctx.fillText(`High Score: ${state.highScore}`, 10, 40);
+    ctx.fillText(`Speed: ${Math.floor(state.speed)}`, 10, 60);
+    
+    // Draw game over screen
+    if (state.gameOver) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '48px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 40);
+        
+        ctx.font = '24px monospace';
+        ctx.fillText(`Final Score: ${state.score}`, canvas.width / 2, canvas.height / 2 + 10);
+        ctx.fillText(`High Score: ${state.highScore}`, canvas.width / 2, canvas.height / 2 + 40);
+        
+        ctx.font = '20px monospace';
+        ctx.fillText('Press SPACE or tap to restart', canvas.width / 2, canvas.height / 2 + 80);
+        ctx.textAlign = 'left';
+    }
 
     // Request the next frame
     requestAnimationFrame(loop);
