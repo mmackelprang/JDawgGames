@@ -11,8 +11,13 @@ Welcome to JDawg Games! This is a collection of classic arcade games recreated i
 
 ### 🏎️ Night Driver
 A classic early racing game where you drive through the night at high speed. Navigate the winding road and try to beat your best time!
-- **Play:** [NightDriver.html](NightDriver.html)
+- **Play:** [NightDriver](NightDriver/index.html)
 - **Controls:** Left/Right arrows to steer, Up/Down to accelerate/brake, R to restart
+
+### 🕹️ Pong
+The game the kind of started it all.
+- **Play:** [Pong](pong/index.html)
+- **Controls:** Follow the onscreen instructions.
 
 ### 👾 Pac-Man
 Navigate the maze, eat all the pellets, and avoid the ghosts in this faithful recreation of the arcade classic!
