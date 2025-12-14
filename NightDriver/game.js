@@ -60,7 +60,8 @@ function loop() {
         }
         
         // Collision Detection: Check if player is off the road
-        const roadEdgeLimit = 800; // Maximum allowed X offset (half road width in world units)
+        // Use 40% of road width as the safe zone (road.roadWidth / 2.5)
+        const roadEdgeLimit = road.roadWidth / 2.5;
         if (Math.abs(state.playerX) > roadEdgeLimit) {
             state.gameOver = true;
             if (state.score > state.highScore) {

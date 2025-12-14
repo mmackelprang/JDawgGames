@@ -74,8 +74,8 @@ export class Road {
                 playerX, cameraY, playerZ
             );
             
-            // Optimization: Stop drawing if segments are behind the camera (z <= 0)
-            if (p1.z <= 0 || p2.z <= 0) continue; 
+            // Optimization: Stop drawing if both segments are behind the camera (z <= 0)
+            if (p1.z <= 0 && p2.z <= 0) continue; 
             
             // --- DRAWING: Trapezoid Road ---
             this.ctx.beginPath();
