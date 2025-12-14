@@ -64,6 +64,8 @@ export class Controls {
                 // The callback in game.js checks state.gameOver before actually restarting
                 // This prevents interference with mobile steering controls (which are separate divs)
                 if (e.target === canvas && this.onRestart) {
+                    e.preventDefault(); // Prevent default touch behavior
+                    e.stopPropagation(); // Stop event from bubbling
                     this.onRestart();
                 }
             });

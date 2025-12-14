@@ -25,6 +25,9 @@ const ctx = canvas.getContext('2d');
 const road = new Road(ctx, canvas.width, canvas.height);
 const controls = new Controls();
 
+// Calculate collision boundary once (performance optimization)
+const roadEdgeLimit = road.roadWidth / ROAD_SAFE_ZONE_DIVISOR;
+
 // Set up restart callback
 controls.onRestart = () => {
     if (state.gameOver) {
@@ -63,7 +66,6 @@ function loop() {
         }
         
         // Collision Detection: Check if player is off the road
-        const roadEdgeLimit = road.roadWidth / ROAD_SAFE_ZONE_DIVISOR;
         if (Math.abs(state.playerX) > roadEdgeLimit) {
             state.gameOver = true;
             if (state.score > state.highScore) {
