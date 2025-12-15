@@ -7,6 +7,8 @@
 
 Welcome to JDawg Games! This is a collection of classic arcade games recreated in HTML5/JavaScript. All games run directly in your web browser - no downloads or installations required!
 
+**Mobile-Friendly:** Most games include touch controls for mobile devices, making them easy to play on phones and tablets!
+
 ## 🕹️ Available Games
 
 ### 🏎️ Night Driver
@@ -22,17 +24,17 @@ The game the kind of started it all.
 ### 👾 Pac-Man
 Navigate the maze, eat all the pellets, and avoid the ghosts in this faithful recreation of the arcade classic!
 - **Play:** [pacman.html](pacman.html)
-- **Controls:** Arrow keys to move
+- **Controls:** Arrow keys to move (touch controls available on mobile)
 
 ### 🛸 Space Invaders
 Defend Earth from waves of alien invaders! Move your ship and shoot down the aliens before they reach you.
 - **Play:** [spaceinvaders.html](spaceinvaders.html)
-- **Controls:** Arrow keys to move, Space to shoot, R to restart
+- **Controls:** Arrow keys to move, Space to shoot, R to restart (touch controls available on mobile)
 
 ### 🦔 Sonic Robber Run
 Run, jump, and shoot your way through this fast-paced endless runner! Avoid or destroy the robbers coming your way.
 - **Play:** [Sonic.html](Sonic.html)
-- **Controls:** Arrow Up/W to jump, Space to shoot
+- **Controls:** Arrow Up/W to jump, Space to shoot (touch controls available on mobile)
 
 ### ☄️ Asteroids
 Navigate your ship through an asteroid field! Rotate, thrust, and shoot to survive. Asteroids break into smaller pieces when hit.
