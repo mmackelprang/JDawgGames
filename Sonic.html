@@ -403,7 +403,7 @@
     }
 
     // Touch controls
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
     
     if (isTouchDevice) {
       const jumpBtn = document.getElementById("jumpBtn");

@@ -532,7 +532,7 @@
   statusLabel.textContent = "Use arrow keys. Eat pellets; power dots let you eat the blue ghost!";
   
   // Touch controls
-  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
   
   if (isTouchDevice) {
     const upBtn = document.getElementById("upBtn");
