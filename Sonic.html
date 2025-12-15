@@ -9,22 +9,90 @@
       padding: 0;
       background: #222;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     canvas {
       background: #87CEEB;
       margin-top: 20px;
       border: 2px solid #000;
       image-rendering: pixelated;
+      touch-action: none;
+    }
+    #touchControls {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 200px;
+      pointer-events: none;
+    }
+    .touch-btn {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid rgba(0, 0, 0, 0.5);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    .touch-btn:active {
+      background: rgba(0, 0, 0, 0.5);
+    }
+    #jumpBtn {
+      right: 10px;
+      bottom: 10px;
+      width: 80px;
+      height: 80px;
+    }
+    #shootBtn {
+      right: 100px;
+      bottom: 10px;
+      width: 80px;
+      height: 80px;
+    }
+    #restartBtn {
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 110px;
+      width: 100px;
+      height: 60px;
+      display: none;
+    }
+    @media (max-width: 768px) {
+      #touchControls {
+        display: block;
+      }
+      canvas {
+        width: 100vw;
+        height: calc(100vh - 220px);
+      }
     }
   </style>
 </head>
 <body>
   <canvas id="game" width="800" height="400"></canvas>
+  <div id="touchControls">
+    <div class="touch-btn" id="jumpBtn">▲</div>
+    <div class="touch-btn" id="shootBtn">●</div>
+    <div class="touch-btn" id="restartBtn">R</div>
+  </div>
 
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
+    const restartBtn = document.getElementById("restartBtn");
 
     const groundY = 340;
 
@@ -325,10 +393,50 @@
       drawBullets();
       drawStats();
       drawGameOver();
+      
+      // Update restart button visibility
+      if (restartBtn) {
+        restartBtn.style.display = gameOver ? 'flex' : 'none';
+      }
 
       requestAnimationFrame(loop);
     }
 
+    // Touch controls
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+    
+    if (isTouchDevice) {
+      const jumpBtn = document.getElementById("jumpBtn");
+      const shootBtn = document.getElementById("shootBtn");
+      
+      jumpBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keys["ArrowUp"] = true;
+      });
+      
+      jumpBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keys["ArrowUp"] = false;
+      });
+      
+      shootBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keys["Space"] = true;
+      });
+      
+      shootBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keys["Space"] = false;
+      });
+      
+      restartBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        if (gameOver) {
+          restartGame();
+        }
+      });
+    }
+    
     loop();
   </script>
 </body>

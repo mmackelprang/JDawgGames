@@ -14,10 +14,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
         canvas {
             border: 2px solid #0f0;
             background: #111;
+            touch-action: none;
         }
         #score {
             font-size: 24px;
@@ -32,18 +36,88 @@
             color: #f00;
             display: none;
         }
+        #touchControls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            pointer-events: none;
+        }
+        .touch-btn {
+            position: absolute;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 10px;
+            color: #0f0;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(0, 255, 0, 0.4);
+        }
+        #leftBtn {
+            left: 10px;
+            bottom: 10px;
+            width: 80px;
+            height: 80px;
+        }
+        #rightBtn {
+            left: 100px;
+            bottom: 10px;
+            width: 80px;
+            height: 80px;
+        }
+        #fireBtn {
+            right: 10px;
+            bottom: 10px;
+            width: 80px;
+            height: 80px;
+        }
+        #restartBtn {
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 110px;
+            width: 100px;
+            height: 60px;
+            display: none;
+        }
+        @media (max-width: 768px) {
+            #touchControls {
+                display: block;
+            }
+            canvas {
+                width: 100vw;
+                height: calc(100vh - 270px);
+            }
+        }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="gameOver">Game Over<br>Press R to Restart</div>
+    <div id="touchControls">
+        <div class="touch-btn" id="leftBtn">◄</div>
+        <div class="touch-btn" id="rightBtn">►</div>
+        <div class="touch-btn" id="fireBtn">●</div>
+        <div class="touch-btn" id="restartBtn">R</div>
+    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreEl = document.getElementById('score');
         const gameOverEl = document.getElementById('gameOver');
+        const restartBtn = document.getElementById('restartBtn');
 
         // Game state
         let gameRunning = true;
@@ -283,7 +357,59 @@
                 checkCollisions();
             }
             draw();
+            
+            // Update restart button visibility
+            if (restartBtn) {
+                restartBtn.style.display = !gameRunning ? 'flex' : 'none';
+            }
+            
             requestAnimationFrame(gameLoop);
+        }
+
+        // Touch controls
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+        
+        if (isTouchDevice) {
+            const leftBtn = document.getElementById("leftBtn");
+            const rightBtn = document.getElementById("rightBtn");
+            const fireBtn = document.getElementById("fireBtn");
+            
+            leftBtn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                keys['ArrowLeft'] = true;
+            });
+            
+            leftBtn.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                keys['ArrowLeft'] = false;
+            });
+            
+            rightBtn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                keys['ArrowRight'] = true;
+            });
+            
+            rightBtn.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                keys['ArrowRight'] = false;
+            });
+            
+            fireBtn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                keys['Space'] = true;
+            });
+            
+            fireBtn.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                keys['Space'] = false;
+            });
+            
+            restartBtn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                if (!gameRunning) {
+                    restart();
+                }
+            });
         }
 
         // Start game
