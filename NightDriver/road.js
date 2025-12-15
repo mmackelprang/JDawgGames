@@ -75,7 +75,7 @@ export class Road {
             );
             
             // Optimization: Skip if both points are behind camera (AND condition)
-            if (p1.z <= 0 && p2.z <= 0) continue; 
+            if (p1.z <= 0 || p2.z <= 0) continue; 
             
             // --- DRAWING: Trapezoid Road ---
             this.ctx.beginPath();
