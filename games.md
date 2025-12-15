@@ -34,6 +34,12 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **Controls:** Arrow Up/W to jump, Space to shoot
 - **Play:** [Sonic Robber Run](Sonic.html)
 
+### Asteroids
+- **File:** `asteroids.html`
+- **Description:** Navigate your ship through an asteroid field! Rotate, thrust, and shoot to survive. Asteroids break into smaller pieces when hit.
+- **Controls:** Arrow keys to rotate and thrust, Space to fire, R to restart
+- **Play:** [Asteroids](asteroids.html)
+
 ---
 
 ## How to Add a New Game
