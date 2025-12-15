@@ -46,6 +46,11 @@ Defend your cities from incoming missiles! Use your anti-ballistic missile batte
 - **Play:** [missilecommand.html](missilecommand.html)
 - **Controls:** Mouse/Touch to aim and click/tap to fire, R to restart
 
+### 🧱 Tetris
+The classic block-stacking puzzle game! Rotate and position falling Tetriminos to create complete lines and clear them. The speed increases as you level up!
+- **Play:** [tetris.html](tetris.html)
+- **Controls:** Arrow keys to move/rotate, Space for hard drop, R to restart (touch controls available on mobile)
+
 ## 🌐 Play Online
 
 Visit the GitHub Pages site to play all games:  
