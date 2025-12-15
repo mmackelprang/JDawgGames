@@ -92,6 +92,7 @@
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
+    const restartBtn = document.getElementById("restartBtn");
 
     const groundY = 340;
 
@@ -394,7 +395,6 @@
       drawGameOver();
       
       // Update restart button visibility
-      const restartBtn = document.getElementById("restartBtn");
       if (restartBtn) {
         restartBtn.style.display = gameOver ? 'flex' : 'none';
       }
