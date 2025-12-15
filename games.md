@@ -40,6 +40,12 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **Controls:** Arrow keys to rotate and thrust, Space to fire, R to restart
 - **Play:** [Asteroids](asteroids.html)
 
+### Missile Command
+- **File:** `missilecommand.html`
+- **Description:** Defend your cities from incoming missiles! Use your anti-ballistic missile batteries to intercept enemy attacks. Classic arcade defense action.
+- **Controls:** Mouse/Touch to aim and click/tap to fire, R to restart
+- **Play:** [Missile Command](missilecommand.html)
+
 ---
 
 ## How to Add a New Game
