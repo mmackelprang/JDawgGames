@@ -13,9 +13,13 @@
       height: 100vh;
       color: #fff;
       font-family: sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     #wrapper {
       text-align: center;
+      position: relative;
     }
     canvas {
       background: #000;
@@ -23,9 +27,73 @@
       margin: 0 auto 8px auto;
       border: 2px solid #00f;
       image-rendering: pixelated;
+      touch-action: none;
     }
     #info {
       font-size: 14px;
+    }
+    #touchControls {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 200px;
+      pointer-events: none;
+    }
+    .touch-btn {
+      position: absolute;
+      background: rgba(0, 49, 255, 0.3);
+      border: 2px solid rgba(0, 49, 255, 0.6);
+      border-radius: 10px;
+      color: #00f;
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    .touch-btn:active {
+      background: rgba(0, 49, 255, 0.5);
+    }
+    #upBtn {
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 110px;
+      width: 70px;
+      height: 70px;
+    }
+    #downBtn {
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 10px;
+      width: 70px;
+      height: 70px;
+    }
+    #leftBtn {
+      left: calc(50% - 90px);
+      bottom: 60px;
+      width: 70px;
+      height: 70px;
+    }
+    #rightBtn {
+      left: calc(50% + 20px);
+      bottom: 60px;
+      width: 70px;
+      height: 70px;
+    }
+    @media (max-width: 768px) {
+      #touchControls {
+        display: block;
+      }
+      canvas {
+        max-width: 100vw;
+        max-height: calc(100vh - 250px);
+      }
     }
   </style>
 </head>
@@ -37,6 +105,12 @@
     &nbsp;|&nbsp;
     <span id="statusLabel">Use arrow keys. Eat all pellets!</span>
   </div>
+</div>
+<div id="touchControls">
+  <div class="touch-btn" id="upBtn">▲</div>
+  <div class="touch-btn" id="downBtn">▼</div>
+  <div class="touch-btn" id="leftBtn">◄</div>
+  <div class="touch-btn" id="rightBtn">►</div>
 </div>
 
 <script>
@@ -456,6 +530,57 @@
   }
 
   statusLabel.textContent = "Use arrow keys. Eat pellets; power dots let you eat the blue ghost!";
+  
+  // Touch controls
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  
+  if (isTouchDevice) {
+    const upBtn = document.getElementById("upBtn");
+    const downBtn = document.getElementById("downBtn");
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    
+    upBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      keysDown['ArrowUp'] = true;
+    });
+    
+    upBtn.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      keysDown['ArrowUp'] = false;
+    });
+    
+    downBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      keysDown['ArrowDown'] = true;
+    });
+    
+    downBtn.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      keysDown['ArrowDown'] = false;
+    });
+    
+    leftBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      keysDown['ArrowLeft'] = true;
+    });
+    
+    leftBtn.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      keysDown['ArrowLeft'] = false;
+    });
+    
+    rightBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      keysDown['ArrowRight'] = true;
+    });
+    
+    rightBtn.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      keysDown['ArrowRight'] = false;
+    });
+  }
+  
   requestAnimationFrame(loop);
 })();
 </script>
