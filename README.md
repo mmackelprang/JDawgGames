@@ -51,6 +51,11 @@ The classic block-stacking puzzle game! Rotate and position falling Tetriminos t
 - **Play:** [tetris.html](tetris.html)
 - **Controls:** Arrow keys to move/rotate, Space for hard drop, R to restart (touch controls available on mobile)
 
+### 🍄 Super Mario Bros
+Jump, run, and collect coins in this classic platformer! Stomp on enemies, hit question blocks for coins and power-ups, and navigate through pipes to reach the goal.
+- **Play:** [mario.html](mario.html)
+- **Controls:** Arrow keys to move, Up/W to jump, Shift/Space to run, R to restart (touch controls available on mobile)
+
 ## 🌐 Play Online
 
 Visit the GitHub Pages site to play all games:  
