@@ -309,7 +309,6 @@
             
             if (!collides(currentPiece, 0, 1)) {
                 currentPiece.y++;
-                dropCounter = 0;
             } else {
                 mergePiece();
                 clearLines();
@@ -487,7 +486,7 @@
             if (gameRunning) {
                 dropCounter += deltaTime;
                 
-                if (dropCounter > dropInterval) {
+                if (dropCounter >= dropInterval) {
                     drop();
                     dropCounter = 0;
                 }
