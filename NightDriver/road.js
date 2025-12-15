@@ -10,6 +10,11 @@ export class Road {
         this.roadWidth = 2000; // "Real-world" width of the road
         this.segments = [];
         
+        // Road generation constants
+        this.LOOKAHEAD_SEGMENTS = 300; // Number of segments to generate ahead
+        this.MIN_CURVE_DURATION = 15; // Minimum segments before curve change
+        this.CURVE_DURATION_REDUCTION = 0.2; // Rate of curve frequency increase
+        
         // Curve generation state
         this.curveIntensity = 0.2; // Starting curve intensity
         this.currentCurve = 0;
@@ -21,7 +26,7 @@ export class Road {
 
     generateTrack() {
         // Create initial segments to draw far into the distance
-        for (let i = 0; i < 300; i++) {
+        for (let i = 0; i < this.LOOKAHEAD_SEGMENTS; i++) {
             this.segments.push({
                 z: i * this.segmentLength, // Distance from camera
                 curve: 0, // Start straight
@@ -32,7 +37,7 @@ export class Road {
     
     // Extend the road infinitely as the player progresses
     extendRoad(playerZ) {
-        const neededSegments = Math.floor(playerZ / this.segmentLength) + 300;
+        const neededSegments = Math.floor(playerZ / this.segmentLength) + this.LOOKAHEAD_SEGMENTS;
         
         while (this.segments.length < neededSegments) {
             // Update curve generation timer
@@ -54,7 +59,7 @@ export class Road {
                 
                 // Gradually increase difficulty
                 this.curveIntensity = Math.min(0.6, this.curveIntensity + 0.005);
-                this.curveDuration = Math.max(15, this.curveDuration - 0.2);
+                this.curveDuration = Math.max(this.MIN_CURVE_DURATION, this.curveDuration - this.CURVE_DURATION_REDUCTION);
             }
             
             this.segments.push({

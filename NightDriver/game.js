@@ -12,6 +12,8 @@ const state = {
     speed: 0,
     maxSpeed: 100,
     baseMaxSpeed: 100, // Starting max speed
+    maxSpeedCap: 150, // Maximum possible speed
+    speedScalingFactor: 5000, // Distance divisor for speed increase
     acceleration: 2,
     steering: 10,
     gameOver: false,
@@ -62,7 +64,7 @@ function loop() {
         state.playerZ += state.speed;
 
         // Gradually increase max speed over time for increasing difficulty
-        state.maxSpeed = Math.min(150, state.baseMaxSpeed + state.playerZ / 5000);
+        state.maxSpeed = Math.min(state.maxSpeedCap, state.baseMaxSpeed + state.playerZ / state.speedScalingFactor);
         
         // Steering based on controls
         if (controls.isLeft) {
