@@ -46,6 +46,12 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **Controls:** Mouse/Touch to aim and click/tap to fire, R to restart
 - **Play:** [Missile Command](missilecommand.html)
 
+### Tetris
+- **File:** `tetris.html`
+- **Description:** The classic block-stacking puzzle game! Rotate and position falling Tetriminos to create complete lines and clear them. The speed increases as you level up!
+- **Controls:** Arrow keys to move/rotate, Space for hard drop, R to restart (touch controls available on mobile)
+- **Play:** [Tetris](tetris.html)
+
 ---
 
 ## How to Add a New Game
