@@ -14,6 +14,8 @@ export class Road {
         this.LOOKAHEAD_SEGMENTS = 300; // Number of segments to generate ahead
         this.MIN_CURVE_DURATION = 15; // Minimum segments before curve change
         this.CURVE_DURATION_REDUCTION = 0.2; // Rate of curve frequency increase
+        this.CURVE_INTENSITY_INCREMENT = 0.005; // Rate of curve intensity increase
+        this.MAX_CURVE_INTENSITY = 0.6; // Maximum curve intensity
         
         // Curve generation state
         this.curveIntensity = 0.2; // Starting curve intensity
@@ -39,6 +41,11 @@ export class Road {
     extendRoad(playerZ) {
         const neededSegments = Math.floor(playerZ / this.segmentLength) + this.LOOKAHEAD_SEGMENTS;
         
+        // Only extend if we're getting close to the end of existing segments
+        if (this.segments.length >= neededSegments) {
+            return;
+        }
+        
         while (this.segments.length < neededSegments) {
             // Update curve generation timer
             this.curveTimer++;
@@ -58,7 +65,7 @@ export class Road {
                 }
                 
                 // Gradually increase difficulty
-                this.curveIntensity = Math.min(0.6, this.curveIntensity + 0.005);
+                this.curveIntensity = Math.min(this.MAX_CURVE_INTENSITY, this.curveIntensity + this.CURVE_INTENSITY_INCREMENT);
                 this.curveDuration = Math.max(this.MIN_CURVE_DURATION, this.curveDuration - this.CURVE_DURATION_REDUCTION);
             }
             
