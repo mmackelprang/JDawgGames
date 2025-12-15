@@ -356,6 +356,13 @@
                 checkCollisions();
             }
             draw();
+            
+            // Update restart button visibility
+            const restartBtn = document.getElementById("restartBtn");
+            if (restartBtn) {
+                restartBtn.style.display = !gameRunning ? 'flex' : 'none';
+            }
+            
             requestAnimationFrame(gameLoop);
         }
 
@@ -404,21 +411,6 @@
                     restart();
                 }
             });
-        }
-        
-        // Show/hide restart button based on game state
-        function updateRestartButton() {
-            const restartBtn = document.getElementById("restartBtn");
-            if (restartBtn) {
-                restartBtn.style.display = !gameRunning ? 'flex' : 'none';
-            }
-        }
-        
-        // Update in game loop to show/hide restart button
-        const originalGameLoop = gameLoop;
-        function gameLoop() {
-            updateRestartButton();
-            originalGameLoop();
         }
 
         // Start game

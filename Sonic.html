@@ -392,6 +392,12 @@
       drawBullets();
       drawStats();
       drawGameOver();
+      
+      // Update restart button visibility
+      const restartBtn = document.getElementById("restartBtn");
+      if (restartBtn) {
+        restartBtn.style.display = gameOver ? 'flex' : 'none';
+      }
 
       requestAnimationFrame(loop);
     }
@@ -432,21 +438,6 @@
       });
     }
     
-    // Show/hide restart button based on game state
-    function updateRestartButton() {
-      const restartBtn = document.getElementById("restartBtn");
-      if (restartBtn) {
-        restartBtn.style.display = gameOver ? 'flex' : 'none';
-      }
-    }
-    
-    // Update in game loop to show/hide restart button
-    const originalLoop = loop;
-    function loop() {
-      updateRestartButton();
-      originalLoop();
-    }
-
     loop();
   </script>
 </body>
