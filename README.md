@@ -39,6 +39,11 @@ Navigate your ship through an asteroid field! Rotate, thrust, and shoot to survi
 - **Play:** [asteroids.html](asteroids.html)
 - **Controls:** Arrow keys to rotate and thrust, Space to fire, R to restart
 
+### 🚀 Missile Command
+Defend your cities from incoming missiles! Use your anti-ballistic missile batteries to intercept enemy attacks. Classic arcade defense action.
+- **Play:** [missilecommand.html](missilecommand.html)
+- **Controls:** Mouse/Touch to aim and click/tap to fire, R to restart
+
 ## 🌐 Play Online
 
 Visit the GitHub Pages site to play all games:  
