@@ -63,6 +63,7 @@
     let robbersShot = 0;
     let robbersStomped = 0;
     let robbersGotAway = 0;
+    let bulletCount = 0;
 
     const keys = {};
     document.addEventListener("keydown", e => {
@@ -101,9 +102,10 @@
         player.jumping = true;
       }
 
-      // Space: shoot bullets, with a small cooldown
-      if (keys["Space"] && attackCooldown <= 0) {
+      // Space: shoot bullets, with a small cooldown (only if we have bullets)
+      if (keys["Space"] && attackCooldown <= 0 && bulletCount > 0) {
         shootBullet();
+        bulletCount--;
         attackCooldown = ATTACK_COOLDOWN_FRAMES;
       }
     }
@@ -177,6 +179,7 @@
         if (stomping) {
           // Kill enemy and bounce player up
           robbersStomped++;
+          bulletCount++;
           enemies.splice(i, 1);
           spawnEnemy();
           player.vy = -10;
@@ -251,9 +254,10 @@
       ctx.font = "16px Arial";
       ctx.textAlign = "left";
       ctx.fillText(`Time: ${formatTime()}`, 10, 20);
-      ctx.fillText(`Shot: ${robbersShot}`, 10, 40);
-      ctx.fillText(`Stomped: ${robbersStomped}`, 10, 60);
-      ctx.fillText(`Got Away: ${robbersGotAway}`, 10, 80);
+      ctx.fillText(`Bullets: ${bulletCount}`, 10, 40);
+      ctx.fillText(`Shot: ${robbersShot}`, 10, 60);
+      ctx.fillText(`Stomped: ${robbersStomped}`, 10, 80);
+      ctx.fillText(`Got Away: ${robbersGotAway}`, 10, 100);
     }
 
     function drawGameOver() {
@@ -295,6 +299,7 @@
       robbersShot = 0;
       robbersStomped = 0;
       robbersGotAway = 0;
+      bulletCount = 0;
       
       // Reset game state
       gameOver = false;
