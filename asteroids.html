@@ -332,6 +332,10 @@
     }
 
     // Check collisions
+    let invulnerable = false;
+    let invulnerableTimer = 0;
+    const invulnerableDuration = 60; // frames
+    
     function checkCollisions() {
       if (!gameRunning) return;
 
@@ -354,19 +358,33 @@
         }
       }
 
-      // Ship vs asteroids
-      asteroids.forEach(asteroid => {
-        const dist = distance(ship.x, ship.y, asteroid.x, asteroid.y);
-        if (dist < ship.radius + asteroid.radius - 5) {
-          // Ship hit!
-          lives--;
-          if (lives <= 0) {
-            gameOver();
-          } else {
-            respawnShip();
+      // Ship vs asteroids (only if not invulnerable)
+      if (!invulnerable) {
+        for (let i = 0; i < asteroids.length; i++) {
+          const asteroid = asteroids[i];
+          const dist = distance(ship.x, ship.y, asteroid.x, asteroid.y);
+          if (dist < ship.radius + asteroid.radius - 5) {
+            // Ship hit!
+            lives--;
+            if (lives <= 0) {
+              gameOver();
+            } else {
+              respawnShip();
+              invulnerable = true;
+              invulnerableTimer = invulnerableDuration;
+            }
+            break; // Only process one collision per frame
           }
         }
-      });
+      }
+
+      // Update invulnerability timer
+      if (invulnerable) {
+        invulnerableTimer--;
+        if (invulnerableTimer <= 0) {
+          invulnerable = false;
+        }
+      }
 
       // Check if level complete
       if (asteroids.length === 0 && gameRunning) {
@@ -401,6 +419,11 @@
 
     // Draw ship
     function drawShip() {
+      // Flicker ship if invulnerable
+      if (invulnerable && Math.floor(invulnerableTimer / 5) % 2 === 0) {
+        return; // Skip drawing to create flicker effect
+      }
+      
       ctx.save();
       ctx.translate(ship.x, ship.y);
       ctx.rotate(ship.angle);
@@ -526,8 +549,7 @@
       if (e.code === 'ArrowRight') { keys.right = true; e.preventDefault(); }
       if (e.code === 'ArrowUp') { keys.thrust = true; e.preventDefault(); }
       if (e.code === 'Space') { 
-        keys.fire = true; 
-        fireBullet();
+        keys.fire = true;
         e.preventDefault(); 
       }
       if (e.code === 'KeyR') { 
