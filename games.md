@@ -52,6 +52,12 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **Controls:** Arrow keys to move/rotate, Space for hard drop, R to restart (touch controls available on mobile)
 - **Play:** [Tetris](tetris.html)
 
+### Super Mario Bros
+- **File:** `mario.html`
+- **Description:** Jump, run, and collect coins in this classic platformer! Stomp on enemies, hit question blocks for coins and power-ups, and navigate through pipes to reach the goal.
+- **Controls:** Arrow keys to move, Up/W to jump, Shift/Space to run, R to restart (touch controls available on mobile)
+- **Play:** [Super Mario Bros](mario.html)
+
 ---
 
 ## How to Add a New Game
