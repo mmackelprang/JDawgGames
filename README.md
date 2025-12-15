@@ -34,6 +34,11 @@ Run, jump, and shoot your way through this fast-paced endless runner! Avoid or d
 - **Play:** [Sonic.html](Sonic.html)
 - **Controls:** Arrow Up/W to jump, Space to shoot
 
+### ☄️ Asteroids
+Navigate your ship through an asteroid field! Rotate, thrust, and shoot to survive. Asteroids break into smaller pieces when hit.
+- **Play:** [asteroids.html](asteroids.html)
+- **Controls:** Arrow keys to rotate and thrust, Space to fire, R to restart
+
 ## 🌐 Play Online
 
 Visit the GitHub Pages site to play all games:  
