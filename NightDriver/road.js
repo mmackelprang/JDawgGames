@@ -9,16 +9,70 @@ export class Road {
         this.segmentLength = 100; // "Real-world" length of a segment
         this.roadWidth = 2000; // "Real-world" width of the road
         this.segments = [];
+        
+        // Road generation constants
+        this.LOOKAHEAD_SEGMENTS = 300; // Number of segments to generate ahead
+        this.MIN_CURVE_DURATION = 15; // Minimum segments before curve change
+        this.CURVE_DURATION_REDUCTION = 0.2; // Rate of curve frequency increase
+        this.CURVE_INTENSITY_INCREMENT = 0.005; // Rate of curve intensity increase
+        this.MAX_CURVE_INTENSITY = 0.6; // Maximum curve intensity
+        
+        // Curve generation state
+        this.curveIntensity = 0.2; // Starting curve intensity
+        this.currentCurve = 0;
+        this.curveTimer = 0;
+        this.curveDuration = 30; // Segments before changing curve
+        
         this.generateTrack();
     }
 
     generateTrack() {
-        // Create 500 segments to draw far into the distance
-        for (let i = 0; i < 500; i++) {
+        // Create initial segments to draw far into the distance
+        for (let i = 0; i < this.LOOKAHEAD_SEGMENTS; i++) {
             this.segments.push({
                 z: i * this.segmentLength, // Distance from camera
-                curve: Math.sin(i / 50) * 0.2, // Simple sine curve track
+                curve: 0, // Start straight
                 y: 0 
+            });
+        }
+    }
+    
+    // Extend the road infinitely as the player progresses
+    extendRoad(playerZ) {
+        const neededSegments = Math.floor(playerZ / this.segmentLength) + this.LOOKAHEAD_SEGMENTS;
+        
+        // Only extend if we're getting close to the end of existing segments
+        if (this.segments.length >= neededSegments) {
+            return;
+        }
+        
+        while (this.segments.length < neededSegments) {
+            // Update curve generation timer
+            this.curveTimer++;
+            
+            // Change curve direction periodically
+            if (this.curveTimer >= this.curveDuration) {
+                this.curveTimer = 0;
+                
+                // Choose new curve: straight, left, or right
+                const r = Math.random();
+                if (r < 0.2) {
+                    this.currentCurve = 0; // Straight (less common now)
+                } else if (r < 0.6) {
+                    this.currentCurve = this.curveIntensity;
+                } else {
+                    this.currentCurve = -this.curveIntensity;
+                }
+                
+                // Gradually increase difficulty
+                this.curveIntensity = Math.min(this.MAX_CURVE_INTENSITY, this.curveIntensity + this.CURVE_INTENSITY_INCREMENT);
+                this.curveDuration = Math.max(this.MIN_CURVE_DURATION, this.curveDuration - this.CURVE_DURATION_REDUCTION);
+            }
+            
+            this.segments.push({
+                z: this.segments.length * this.segmentLength,
+                curve: this.currentCurve,
+                y: 0
             });
         }
     }
@@ -46,6 +100,9 @@ export class Road {
     }
 
     draw(playerZ, playerX) {
+        // Extend road as player progresses
+        this.extendRoad(playerZ);
+        
         // Simple fixed camera Y for a flat road
         const cameraY = 1400; 
 

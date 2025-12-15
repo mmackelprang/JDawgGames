@@ -11,6 +11,9 @@ const state = {
     playerX: 0, // Player horizontal position
     speed: 0,
     maxSpeed: 100,
+    baseMaxSpeed: 100, // Starting max speed
+    maxSpeedCap: 150, // Maximum possible speed
+    speedScalingFactor: 5000, // Distance divisor for speed increase
     acceleration: 2,
     steering: 10,
     gameOver: false,
@@ -40,8 +43,14 @@ function resetGame() {
     state.playerZ = 0;
     state.playerX = 0;
     state.speed = 0;
+    state.maxSpeed = state.baseMaxSpeed;
     state.gameOver = false;
     state.score = 0;
+    // Reset road generation parameters
+    road.curveIntensity = 0.2;
+    road.currentCurve = 0;
+    road.curveTimer = 0;
+    road.curveDuration = 30;
 }
 
 // The main game loop
@@ -54,8 +63,8 @@ function loop() {
         // Update Player Z position
         state.playerZ += state.speed;
 
-        // Wrap the track position
-        state.playerZ %= (road.segments.length * road.segmentLength); 
+        // Gradually increase max speed over time for increasing difficulty
+        state.maxSpeed = Math.min(state.maxSpeedCap, state.baseMaxSpeed + state.playerZ / state.speedScalingFactor);
         
         // Steering based on controls
         if (controls.isLeft) {
