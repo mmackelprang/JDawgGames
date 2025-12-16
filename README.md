@@ -11,6 +11,16 @@ Welcome to JDawg Games! This is a collection of classic arcade games recreated i
 
 ## 🕹️ Available Games
 
+## 🚀 Advanced Games
+
+### 🚀 Star Raiders
+A mobile-friendly clone of the classic Atari 800 space combat game! Defend sectors from enemy ships, manage your energy and shields, and use the tactical radar to track threats.
+- **Play:** [starraiders.html](starraiders.html)
+- **Controls:** Arrow keys to move, Space to fire, R to restart (touch controls available on mobile)
+- **Features:** Progressive difficulty, tactical radar display, energy/shield management, wave-based gameplay
+
+## 🎯 Classic Canvas Games
+
 ### 🏎️ Night Driver
 A classic early racing game where you drive through the night at high speed. Navigate the winding road and try to beat your best time!
 - **Play:** [NightDriver](NightDriver/index.html)

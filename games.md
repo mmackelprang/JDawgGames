@@ -4,6 +4,16 @@ This file lists all available games in the JDawg Games collection. To add a new 
 
 ## Available Games
 
+## Advanced Games
+
+### Star Raiders
+- **File:** `starraiders.html`
+- **Description:** A mobile-friendly clone of the classic Atari 800 space combat game! Defend sectors from enemy ships, manage your energy and shields, and use the tactical radar to track threats.
+- **Controls:** Arrow keys to move, Space to fire, R to restart (touch controls available on mobile)
+- **Play:** [Star Raiders](starraiders.html)
+
+## Classic Canvas Games
+
 ### Night Driver
 - **File:** `NightDriver.html`
 - **Description:** Race through the night! Steer your car down a winding road at high speed. Classic early racing game action.
