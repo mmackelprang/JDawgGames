@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Run - Phaser Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #game-container {
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#87CEEB',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 800 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+
+        const game = new Phaser.Game(config);
+        
+        let player;
+        let cursors;
+        let platforms;
+        let enemies;
+        let rings;
+        let score = 0;
+        let lives = 3;
+        let scoreText;
+        let livesText;
+        let gameOver = false;
+        let gameSpeed = 3;
+        let jumpKey;
+        let spaceKey;
+
+        function preload() {
+            // No external assets needed - using graphics
+        }
+
+        function create() {
+            // Create ground
+            platforms = this.physics.add.staticGroup();
+            const ground = this.add.rectangle(400, 580, 800, 40, 0x8b4513);
+            platforms.add(ground);
+            ground.body.immovable = true;
+
+            // Create player (Sonic-like character)
+            player = this.physics.add.sprite(100, 450, null);
+            const playerGraphics = this.add.graphics();
+            playerGraphics.fillStyle(0x0000ff);
+            playerGraphics.fillCircle(0, 0, 15);
+            playerGraphics.fillStyle(0xffffff);
+            playerGraphics.fillCircle(-5, -3, 5);
+            playerGraphics.fillCircle(5, -3, 5);
+            playerGraphics.generateTexture('player', 30, 30);
+            playerGraphics.destroy();
+            player.setTexture('player');
+            player.setBounce(0.1);
+            player.setCollideWorldBounds(true);
+
+            // Create enemy group
+            enemies = this.physics.add.group();
+
+            // Create rings group
+            rings = this.physics.add.group();
+
+            // Setup collisions
+            this.physics.add.collider(player, platforms);
+            this.physics.add.collider(enemies, platforms);
+            this.physics.add.overlap(player, rings, collectRing, null, this);
+            this.physics.add.overlap(player, enemies, hitEnemy, null, this);
+
+            // Setup controls
+            cursors = this.input.keyboard.createCursorKeys();
+            jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+            spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+            this.input.keyboard.on('keydown-R', restartGame, this);
+
+            // Setup touch controls for mobile
+            if (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) {
+                setupTouchControls(this);
+            }
+
+            // UI Text
+            scoreText = this.add.text(16, 16, 'RINGS: 0', {
+                fontSize: '24px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            livesText = this.add.text(16, 44, 'LIVES: 3', {
+                fontSize: '24px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            this.add.text(16, 570, 'W/Up: Jump | Space: Roll | R: Restart', {
+                fontSize: '14px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            // Spawn initial enemies and rings
+            this.time.addEvent({
+                delay: 2000,
+                callback: spawnEnemy,
+                callbackScope: this,
+                loop: true
+            });
+
+            this.time.addEvent({
+                delay: 1500,
+                callback: spawnRing,
+                callbackScope: this,
+                loop: true
+            });
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Player jump
+            if ((cursors.up.isDown || jumpKey.isDown) && player.body.touching.down) {
+                player.setVelocityY(-500);
+            }
+
+            // Player roll/attack (speed boost)
+            if (Phaser.Input.Keyboard.JustDown(spaceKey) && player.body.touching.down) {
+                player.setVelocityX(300);
+                this.time.delayedCall(500, () => {
+                    player.setVelocityX(0);
+                });
+            }
+
+            // Move enemies
+            enemies.children.entries.forEach(enemy => {
+                if (enemy.x < -50) {
+                    enemy.destroy();
+                }
+            });
+
+            // Move rings
+            rings.children.entries.forEach(ring => {
+                if (ring.x < -50) {
+                    ring.destroy();
+                }
+            });
+
+            // Increase difficulty over time
+            gameSpeed = 3 + (score * 0.01);
+        }
+
+        function spawnEnemy() {
+            if (gameOver) return;
+
+            const enemyGraphics = this.add.graphics();
+            enemyGraphics.fillStyle(0xff0000);
+            enemyGraphics.fillRect(-15, -15, 30, 30);
+            enemyGraphics.fillStyle(0x000000);
+            enemyGraphics.fillCircle(-5, -5, 3);
+            enemyGraphics.fillCircle(5, -5, 3);
+            enemyGraphics.generateTexture('enemy', 30, 30);
+            enemyGraphics.destroy();
+
+            const enemy = this.physics.add.sprite(850, 535, 'enemy');
+            enemies.add(enemy);
+            enemy.setVelocityX(-gameSpeed * 50);
+            enemy.body.immovable = true;
+        }
+
+        function spawnRing() {
+            if (gameOver) return;
+
+            const ringGraphics = this.add.graphics();
+            ringGraphics.lineStyle(3, 0xffff00);
+            ringGraphics.strokeCircle(0, 0, 10);
+            ringGraphics.generateTexture('ring', 24, 24);
+            ringGraphics.destroy();
+
+            const ring = this.physics.add.sprite(850, Phaser.Math.Between(400, 500), 'ring');
+            rings.add(ring);
+            ring.setVelocityX(-gameSpeed * 50);
+        }
+
+        function collectRing(player, ring) {
+            ring.destroy();
+            score += 10;
+            scoreText.setText('RINGS: ' + score);
+        }
+
+        function hitEnemy(player, enemy) {
+            // Check if player is jumping on enemy
+            if (player.body.velocity.y > 0 && player.y < enemy.y - 10) {
+                enemy.destroy();
+                player.setVelocityY(-300);
+                score += 50;
+                scoreText.setText('RINGS: ' + score);
+            } else {
+                // Player hit by enemy
+                lives--;
+                livesText.setText('LIVES: ' + lives);
+                
+                player.setTint(0xff0000);
+                this.time.delayedCall(500, () => {
+                    player.clearTint();
+                });
+
+                if (lives <= 0) {
+                    gameOver = true;
+                    player.setVelocity(0, 0);
+                    enemies.children.entries.forEach(e => e.destroy());
+                    rings.children.entries.forEach(r => r.destroy());
+                    
+                    const gameOverText = this.add.text(400, 300, 'GAME OVER\nPress R to Restart', {
+                        fontSize: '48px',
+                        fill: '#f00',
+                        fontFamily: 'monospace',
+                        align: 'center'
+                    });
+                    gameOverText.setOrigin(0.5);
+                }
+            }
+        }
+
+        function restartGame() {
+            if (gameOver) {
+                score = 0;
+                lives = 3;
+                gameOver = false;
+                gameSpeed = 3;
+                game.scene.scenes[0].scene.restart();
+            }
+        }
+
+        function setupTouchControls(scene) {
+            const buttonSize = 80;
+            const buttonAlpha = 0.3;
+            const buttonColor = 0x00ff00;
+
+            // Jump button
+            const jumpBtn = scene.add.circle(100, 480, buttonSize/2, buttonColor, buttonAlpha);
+            jumpBtn.setScrollFactor(0);
+            jumpBtn.setInteractive();
+            const jumpText = scene.add.text(100, 480, 'JUMP', {
+                fontSize: '16px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            jumpText.setOrigin(0.5);
+            jumpText.setScrollFactor(0);
+            
+            jumpBtn.on('pointerdown', () => {
+                if (player.body.touching.down) {
+                    player.setVelocityY(-500);
+                }
+            });
+
+            // Roll button
+            const rollBtn = scene.add.circle(220, 480, buttonSize/2, buttonColor, buttonAlpha);
+            rollBtn.setScrollFactor(0);
+            rollBtn.setInteractive();
+            const rollText = scene.add.text(220, 480, 'ROLL', {
+                fontSize: '16px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            rollText.setOrigin(0.5);
+            rollText.setScrollFactor(0);
+            
+            rollBtn.on('pointerdown', () => {
+                if (player.body.touching.down) {
+                    player.setVelocityX(300);
+                    scene.time.delayedCall(500, () => {
+                        player.setVelocityX(0);
+                    });
+                }
+            });
+
+            // Restart button
+            const restartBtn = scene.add.circle(700, 480, buttonSize/2, buttonColor, buttonAlpha);
+            restartBtn.setScrollFactor(0);
+            restartBtn.setInteractive();
+            const restartText = scene.add.text(700, 480, 'R', {
+                fontSize: '24px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            restartText.setOrigin(0.5);
+            restartText.setScrollFactor(0);
+            restartBtn.on('pointerdown', () => restartGame());
+        }
+    </script>
+</body>
+</html>

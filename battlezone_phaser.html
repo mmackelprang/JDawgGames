@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battlezone - Phaser Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #game-container {
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#000000',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+
+        const game = new Phaser.Game(config);
+        
+        let player;
+        let cursors;
+        let enemies;
+        let bullets;
+        let obstacles;
+        let score = 0;
+        let lives = 3;
+        let scoreText;
+        let livesText;
+        let gameOver = false;
+        let fireKey;
+        let radarGraphics;
+        let lastFireTime = 0;
+        let playerAngle = 0;
+        let playerX = 400;
+        let playerZ = 0; // Simulated depth
+
+        function preload() {
+            // No external assets needed - using graphics
+        }
+
+        function create() {
+            // Create player (tank) - first person view
+            player = this.physics.add.sprite(400, 500, null);
+            const tankGraphics = this.add.graphics();
+            tankGraphics.lineStyle(3, 0x00ff00);
+            tankGraphics.strokeRect(-20, -10, 40, 20);
+            tankGraphics.strokeRect(-5, -20, 10, 10);
+            tankGraphics.generateTexture('tank', 50, 40);
+            tankGraphics.destroy();
+            player.setTexture('tank');
+
+            // Create crosshair
+            const crosshairGraphics = this.add.graphics();
+            crosshairGraphics.lineStyle(2, 0x00ff00);
+            crosshairGraphics.strokeCircle(0, 0, 10);
+            crosshairGraphics.moveTo(0, -15);
+            crosshairGraphics.lineTo(0, -5);
+            crosshairGraphics.moveTo(0, 15);
+            crosshairGraphics.lineTo(0, 5);
+            crosshairGraphics.moveTo(-15, 0);
+            crosshairGraphics.lineTo(-5, 0);
+            crosshairGraphics.moveTo(15, 0);
+            crosshairGraphics.lineTo(5, 0);
+            crosshairGraphics.strokePath();
+            crosshairGraphics.generateTexture('crosshair', 30, 30);
+            crosshairGraphics.destroy();
+            
+            const crosshair = this.add.image(400, 250, 'crosshair');
+
+            // Draw horizon line
+            const horizon = this.add.graphics();
+            horizon.lineStyle(2, 0x00ff00);
+            horizon.lineTo(800, 0);
+            horizon.setPosition(0, 300);
+
+            // Draw mountains in background
+            const mountains = this.add.graphics();
+            mountains.lineStyle(1, 0x00ff00);
+            for (let i = 0; i < 10; i++) {
+                const x = i * 100;
+                const height = Phaser.Math.Between(50, 150);
+                mountains.beginPath();
+                mountains.moveTo(x, 300);
+                mountains.lineTo(x + 50, 300 - height);
+                mountains.lineTo(x + 100, 300);
+                mountains.strokePath();
+            }
+
+            // Create enemy group
+            enemies = this.physics.add.group();
+
+            // Create bullet group
+            bullets = this.physics.add.group();
+
+            // Create obstacles group
+            obstacles = this.physics.add.group();
+
+            // Setup controls
+            cursors = this.input.keyboard.createCursorKeys();
+            fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+            this.input.keyboard.on('keydown-R', restartGame, this);
+
+            // Setup touch controls for mobile
+            if (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) {
+                setupTouchControls(this);
+            }
+
+            // UI Text
+            scoreText = this.add.text(16, 16, 'SCORE: 0', {
+                fontSize: '20px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            livesText = this.add.text(16, 40, 'LIVES: 3', {
+                fontSize: '20px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            this.add.text(16, 570, 'Arrows: Move/Turn | Space: Fire | R: Restart', {
+                fontSize: '14px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            // Create radar display
+            radarGraphics = this.add.graphics();
+            radarGraphics.setDepth(1000);
+
+            // Spawn initial enemies
+            this.time.addEvent({
+                delay: 3000,
+                callback: spawnEnemy,
+                callbackScope: this,
+                loop: true
+            });
+
+            // Spawn initial obstacles
+            for (let i = 0; i < 5; i++) {
+                spawnObstacle(this);
+            }
+
+            // Initial enemies
+            spawnEnemy(this);
+            spawnEnemy(this);
+        }
+
+        function update(time) {
+            if (gameOver) return;
+
+            // Player rotation
+            if (cursors.left.isDown) {
+                playerAngle -= 0.05;
+            } else if (cursors.right.isDown) {
+                playerAngle += 0.05;
+            }
+
+            // Player movement (forward/backward)
+            if (cursors.up.isDown) {
+                playerX += Math.sin(playerAngle) * 3;
+                playerZ += Math.cos(playerAngle) * 3;
+            } else if (cursors.down.isDown) {
+                playerX -= Math.sin(playerAngle) * 2;
+                playerZ -= Math.cos(playerAngle) * 2;
+            }
+
+            // Fire bullets
+            if (fireKey.isDown && time > lastFireTime + 500) {
+                fireBullet(this);
+                lastFireTime = time;
+            }
+
+            // Update enemies to face player
+            enemies.children.entries.forEach(enemy => {
+                updateEnemyPosition(enemy);
+            });
+
+            // Update obstacles
+            obstacles.children.entries.forEach(obstacle => {
+                updateObstaclePosition(obstacle);
+            });
+
+            // Update bullets
+            bullets.children.entries.forEach(bullet => {
+                if (bullet.getData('life') <= 0 || bullet.y < 100 || bullet.y > 500) {
+                    bullet.destroy();
+                }
+                bullet.setData('life', bullet.getData('life') - 1);
+            });
+
+            // Draw radar
+            drawRadar(this);
+        }
+
+        function spawnEnemy(scene) {
+            if (gameOver) return;
+
+            const enemyGraphics = scene.add.graphics();
+            enemyGraphics.lineStyle(2, 0xff0000);
+            enemyGraphics.strokeRect(-15, -10, 30, 20);
+            enemyGraphics.strokeRect(-5, -15, 10, 5);
+            enemyGraphics.generateTexture('enemy', 40, 30);
+            enemyGraphics.destroy();
+
+            const angle = Phaser.Math.Between(0, 360) * Math.PI / 180;
+            const distance = Phaser.Math.Between(200, 500);
+            
+            const enemy = scene.physics.add.sprite(400, 300, 'enemy');
+            enemies.add(enemy);
+            enemy.setScale(0.5);
+            enemy.setData('angle', angle);
+            enemy.setData('distance', distance);
+            enemy.setData('worldX', playerX + Math.sin(angle) * distance);
+            enemy.setData('worldZ', playerZ + Math.cos(angle) * distance);
+        }
+
+        function spawnObstacle(scene) {
+            const obstacleGraphics = scene.add.graphics();
+            obstacleGraphics.lineStyle(2, 0x00ff00);
+            obstacleGraphics.strokeRect(-10, -20, 20, 40);
+            obstacleGraphics.generateTexture('obstacle', 30, 50);
+            obstacleGraphics.destroy();
+
+            const angle = Phaser.Math.Between(0, 360) * Math.PI / 180;
+            const distance = Phaser.Math.Between(150, 600);
+            
+            const obstacle = scene.physics.add.sprite(400, 300, 'obstacle');
+            obstacles.add(obstacle);
+            obstacle.setScale(0.8);
+            obstacle.setData('angle', angle);
+            obstacle.setData('distance', distance);
+            obstacle.setData('worldX', playerX + Math.sin(angle) * distance);
+            obstacle.setData('worldZ', playerZ + Math.cos(angle) * distance);
+        }
+
+        function updateEnemyPosition(enemy) {
+            const dx = enemy.getData('worldX') - playerX;
+            const dz = enemy.getData('worldZ') - playerZ;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            const angle = Math.atan2(dx, dz) - playerAngle;
+
+            if (dist < 50) {
+                // Enemy reached player
+                lives--;
+                livesText.setText('LIVES: ' + lives);
+                enemy.destroy();
+                
+                if (lives <= 0) {
+                    endGame(game.scene.scenes[0]);
+                }
+                return;
+            }
+
+            // Update position based on player's view
+            if (Math.abs(angle) < Math.PI / 2 && dist < 800) {
+                const screenX = 400 + Math.sin(angle) * (300 / (dist / 100));
+                const scale = Math.max(0.3, 200 / dist);
+                const screenY = 300 - (30 / scale);
+                
+                enemy.setPosition(screenX, screenY);
+                enemy.setScale(scale);
+                enemy.setVisible(true);
+            } else {
+                enemy.setVisible(false);
+            }
+
+            // Move enemy towards player
+            const speed = 0.5;
+            enemy.setData('worldX', enemy.getData('worldX') - dx / dist * speed);
+            enemy.setData('worldZ', enemy.getData('worldZ') - dz / dist * speed);
+        }
+
+        function updateObstaclePosition(obstacle) {
+            const dx = obstacle.getData('worldX') - playerX;
+            const dz = obstacle.getData('worldZ') - playerZ;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            const angle = Math.atan2(dx, dz) - playerAngle;
+
+            // Update position based on player's view
+            if (Math.abs(angle) < Math.PI / 2 && dist < 800) {
+                const screenX = 400 + Math.sin(angle) * (300 / (dist / 100));
+                const scale = Math.max(0.3, 200 / dist);
+                const screenY = 300 - (20 / scale);
+                
+                obstacle.setPosition(screenX, screenY);
+                obstacle.setScale(scale);
+                obstacle.setVisible(true);
+            } else {
+                obstacle.setVisible(false);
+            }
+        }
+
+        function fireBullet(scene) {
+            const bulletGraphics = scene.add.graphics();
+            bulletGraphics.fillStyle(0x00ff00);
+            bulletGraphics.fillCircle(0, 0, 3);
+            bulletGraphics.generateTexture('bullet', 6, 6);
+            bulletGraphics.destroy();
+
+            const bullet = scene.physics.add.sprite(400, 250, 'bullet');
+            bullets.add(bullet);
+            bullet.setVelocityY(-400);
+            bullet.setData('life', 60);
+            bullet.setData('angle', playerAngle);
+
+            // Check for hits
+            scene.physics.add.overlap(bullet, enemies, hitEnemy, null, scene);
+        }
+
+        function hitEnemy(bullet, enemy) {
+            bullet.destroy();
+            enemy.destroy();
+            score += 100;
+            scoreText.setText('SCORE: ' + score);
+        }
+
+        function drawRadar(scene) {
+            radarGraphics.clear();
+            radarGraphics.lineStyle(2, 0x00ff00);
+            radarGraphics.strokeCircle(700, 500, 60);
+            
+            // Draw player as center
+            radarGraphics.fillStyle(0x00ff00);
+            radarGraphics.fillCircle(700, 500, 3);
+
+            // Draw enemies on radar
+            enemies.children.entries.forEach(enemy => {
+                const dx = enemy.getData('worldX') - playerX;
+                const dz = enemy.getData('worldZ') - playerZ;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                const angle = Math.atan2(dx, dz) - playerAngle;
+                
+                if (dist < 600) {
+                    const radarX = 700 + Math.sin(angle) * (dist / 10);
+                    const radarY = 500 - Math.cos(angle) * (dist / 10);
+                    radarGraphics.fillStyle(0xff0000);
+                    radarGraphics.fillCircle(radarX, radarY, 3);
+                }
+            });
+        }
+
+        function endGame(scene) {
+            gameOver = true;
+            enemies.children.entries.forEach(e => e.setVelocity(0, 0));
+            
+            const gameOverText = scene.add.text(400, 300, 'GAME OVER\nPress R to Restart', {
+                fontSize: '48px',
+                fill: '#0f0',
+                fontFamily: 'monospace',
+                align: 'center'
+            });
+            gameOverText.setOrigin(0.5);
+        }
+
+        function restartGame() {
+            if (gameOver) {
+                score = 0;
+                lives = 3;
+                gameOver = false;
+                playerAngle = 0;
+                playerX = 400;
+                playerZ = 0;
+                game.scene.scenes[0].scene.restart();
+            }
+        }
+
+        function setupTouchControls(scene) {
+            const buttonSize = 70;
+            const buttonAlpha = 0.3;
+            const buttonColor = 0x00ff00;
+
+            // Left button
+            const leftBtn = scene.add.circle(60, 480, buttonSize/2, buttonColor, buttonAlpha);
+            leftBtn.setScrollFactor(0);
+            leftBtn.setInteractive();
+            leftBtn.on('pointerdown', () => { cursors.left.isDown = true; });
+            leftBtn.on('pointerup', () => { cursors.left.isDown = false; });
+            leftBtn.on('pointerout', () => { cursors.left.isDown = false; });
+
+            // Right button
+            const rightBtn = scene.add.circle(180, 480, buttonSize/2, buttonColor, buttonAlpha);
+            rightBtn.setScrollFactor(0);
+            rightBtn.setInteractive();
+            rightBtn.on('pointerdown', () => { cursors.right.isDown = true; });
+            rightBtn.on('pointerup', () => { cursors.right.isDown = false; });
+            rightBtn.on('pointerout', () => { cursors.right.isDown = false; });
+
+            // Up button
+            const upBtn = scene.add.circle(120, 420, buttonSize/2, buttonColor, buttonAlpha);
+            upBtn.setScrollFactor(0);
+            upBtn.setInteractive();
+            upBtn.on('pointerdown', () => { cursors.up.isDown = true; });
+            upBtn.on('pointerup', () => { cursors.up.isDown = false; });
+            upBtn.on('pointerout', () => { cursors.up.isDown = false; });
+
+            // Down button
+            const downBtn = scene.add.circle(120, 540, buttonSize/2, buttonColor, buttonAlpha);
+            downBtn.setScrollFactor(0);
+            downBtn.setInteractive();
+            downBtn.on('pointerdown', () => { cursors.down.isDown = true; });
+            downBtn.on('pointerup', () => { cursors.down.isDown = false; });
+            downBtn.on('pointerout', () => { cursors.down.isDown = false; });
+
+            // Fire button
+            const fireBtn = scene.add.circle(640, 480, buttonSize/2, buttonColor, buttonAlpha);
+            fireBtn.setScrollFactor(0);
+            fireBtn.setInteractive();
+            const fireText = scene.add.text(640, 480, 'FIRE', {
+                fontSize: '16px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            fireText.setOrigin(0.5);
+            fireText.setScrollFactor(0);
+            fireBtn.on('pointerdown', () => { fireKey.isDown = true; });
+            fireBtn.on('pointerup', () => { fireKey.isDown = false; });
+            fireBtn.on('pointerout', () => { fireKey.isDown = false; });
+        }
+    </script>
+</body>
+</html>
