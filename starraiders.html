@@ -4,84 +4,162 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Raiders - JDawg Games</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
     <style>
         body {
             margin: 0;
-            padding: 0;
+            padding: 20px;
             background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            color: #0f0;
             font-family: monospace;
-        }
-        #game-container {
-            width: 100%;
-            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
         canvas {
-            display: block;
-            margin: 0 auto;
+            border: 2px solid #0f0;
+            background: #000;
+            touch-action: none;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #f00;
+            display: none;
+            text-align: center;
+        }
+        #touchControls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 220px;
+            pointer-events: none;
+        }
+        .touch-btn {
+            position: absolute;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 10px;
+            color: #0f0;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(0, 255, 0, 0.4);
+        }
+        #leftBtn {
+            left: 10px;
+            bottom: 70px;
+            width: 70px;
+            height: 70px;
+        }
+        #rightBtn {
+            left: 90px;
+            bottom: 70px;
+            width: 70px;
+            height: 70px;
+        }
+        #upBtn {
+            left: 50px;
+            bottom: 150px;
+            width: 70px;
+            height: 70px;
+        }
+        #downBtn {
+            left: 50px;
+            bottom: 10px;
+            width: 70px;
+            height: 70px;
+        }
+        #fireBtn {
+            right: 10px;
+            bottom: 70px;
+            width: 90px;
+            height: 90px;
+        }
+        #restartBtn {
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 10px;
+            width: 100px;
+            height: 50px;
+            font-size: 16px;
+            display: none;
+        }
+        @media (max-width: 768px) {
+            #touchControls {
+                display: block;
+            }
+            canvas {
+                width: 100vw;
+                height: calc(100vh - 270px);
+            }
         }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="gameOver"></div>
+    <div id="touchControls">
+        <div class="touch-btn" id="leftBtn">←</div>
+        <div class="touch-btn" id="rightBtn">→</div>
+        <div class="touch-btn" id="upBtn">↑</div>
+        <div class="touch-btn" id="downBtn">↓</div>
+        <div class="touch-btn" id="fireBtn">FIRE</div>
+        <div class="touch-btn" id="restartBtn">RESTART</div>
+    </div>
     <script>
-        // Game configuration
-        const config = {
-            type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            parent: 'game-container',
-            backgroundColor: '#000000',
-            scale: {
-                mode: Phaser.Scale.FIT,
-                autoCenter: Phaser.Scale.CENTER_BOTH
-            },
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 0 },
-                    debug: false
-                }
-            },
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            }
-        };
-
-        const game = new Phaser.Game(config);
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
         // Game variables
-        let player;
-        let cursors;
-        let enemies;
-        let bullets;
-        let enemyBullets;
-        let stars;
+        let player = {
+            x: 400,
+            y: 500,
+            vx: 0,
+            vy: 0,
+            size: 15
+        };
+        
+        let keys = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            space: false
+        };
+        
+        let enemies = [];
+        let bullets = [];
+        let enemyBullets = [];
+        let stars = [];
         let score = 0;
         let energy = 100;
         let shields = 100;
         let sectorsCleared = 0;
-        let scoreText;
-        let energyText;
-        let shieldsText;
-        let sectorsText;
         let gameOver = false;
-        let fireButton;
         let lastFired = 0;
         let fireRate = 250;
-        let radarGraphics;
-        let radarEnemies = [];
         let enemySpawnTimer = 0;
         let enemySpawnRate = 2000;
         let waveNumber = 1;
         let enemiesInWave = 5;
         let enemiesDestroyed = 0;
+        let lastTime = 0;
         
         // Touch controls
         let touchLeft = false;
@@ -90,189 +168,153 @@
         let touchDown = false;
         let touchFire = false;
 
-        function preload() {
-            // Create simple graphics for game objects
-            // We'll use graphics instead of loading images for simplicity
-        }
-
-        function create() {
+        function init() {
             // Create starfield background
-            stars = this.add.group();
             for (let i = 0; i < 100; i++) {
-                const x = Phaser.Math.Between(0, 800);
-                const y = Phaser.Math.Between(0, 600);
-                const star = this.add.circle(x, y, 1, 0xffffff, 0.8);
-                stars.add(star);
+                stars.push({
+                    x: Math.random() * 800,
+                    y: Math.random() * 600,
+                    size: Math.random() * 2
+                });
             }
 
-            // Create player ship
-            player = this.add.graphics();
-            player.fillStyle(0x00ff00, 1);
-            player.fillTriangle(0, -15, -10, 15, 10, 15);
-            player.x = 400;
-            player.y = 500;
-            player.setDataEnabled();
-            player.setData('velocity', { x: 0, y: 0 });
-            player.setData('active', true);
-
-            // Create groups
-            enemies = this.add.group();
-            bullets = this.add.group();
-            enemyBullets = this.add.group();
-
-            // Create radar display
-            radarGraphics = this.add.graphics();
-            drawRadar();
-
-            // Input setup
-            cursors = this.input.keyboard.createCursorKeys();
-            fireButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-            
-            // R key to restart
-            this.input.keyboard.on('keydown-R', () => {
-                if (gameOver) {
-                    restartGame();
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') keys.left = true;
+                if (e.key === 'ArrowRight') keys.right = true;
+                if (e.key === 'ArrowUp') keys.up = true;
+                if (e.key === 'ArrowDown') keys.down = true;
+                if (e.key === ' ') keys.space = true;
+                if (e.key === 'r' || e.key === 'R') {
+                    if (gameOver) restartGame();
                 }
             });
 
-            // UI Text
-            scoreText = this.add.text(16, 16, 'SCORE: 0', { 
-                fontSize: '18px', 
-                fill: '#0f0',
-                fontFamily: 'monospace'
-            });
-            energyText = this.add.text(16, 40, 'ENERGY: 100', { 
-                fontSize: '18px', 
-                fill: '#0f0',
-                fontFamily: 'monospace'
-            });
-            shieldsText = this.add.text(16, 64, 'SHIELDS: 100', { 
-                fontSize: '18px', 
-                fill: '#0f0',
-                fontFamily: 'monospace'
-            });
-            sectorsText = this.add.text(16, 88, 'SECTORS: 0', { 
-                fontSize: '18px', 
-                fill: '#0f0',
-                fontFamily: 'monospace'
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowLeft') keys.left = false;
+                if (e.key === 'ArrowRight') keys.right = false;
+                if (e.key === 'ArrowUp') keys.up = false;
+                if (e.key === 'ArrowDown') keys.down = false;
+                if (e.key === ' ') keys.space = false;
             });
 
             // Spawn initial enemies
-            spawnEnemyWave(this);
+            spawnEnemyWave();
 
             // Setup touch controls for mobile
             if (isTouchDevice()) {
-                setupTouchControls(this);
+                setupTouchControls();
             }
+
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(timestamp) {
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            if (!gameOver) {
+                update(timestamp);
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
         }
 
         function update(time) {
-            if (gameOver) {
-                return;
-            }
+            if (gameOver) return;
 
             // Player movement
-            const playerData = player.getData('velocity');
             const speed = 5;
+            player.vx = 0;
+            player.vy = 0;
             
-            if (cursors.left.isDown || touchLeft) {
-                playerData.x = -speed;
-            } else if (cursors.right.isDown || touchRight) {
-                playerData.x = speed;
-            } else {
-                playerData.x = 0;
-            }
+            if (keys.left || touchLeft) player.vx = -speed;
+            if (keys.right || touchRight) player.vx = speed;
+            if (keys.up || touchUp) player.vy = -speed;
+            if (keys.down || touchDown) player.vy = speed;
 
-            if (cursors.up.isDown || touchUp) {
-                playerData.y = -speed;
-            } else if (cursors.down.isDown || touchDown) {
-                playerData.y = speed;
-            } else {
-                playerData.y = 0;
-            }
-
-            player.x += playerData.x;
-            player.y += playerData.y;
+            player.x += player.vx;
+            player.y += player.vy;
 
             // Keep player in bounds
-            player.x = Phaser.Math.Clamp(player.x, 20, 780);
-            player.y = Phaser.Math.Clamp(player.y, 20, 580);
+            player.x = Math.max(20, Math.min(780, player.x));
+            player.y = Math.max(20, Math.min(580, player.y));
 
             // Firing
-            if ((fireButton.isDown || touchFire) && time > lastFired) {
-                fireBullet(this);
+            if ((keys.space || touchFire) && time > lastFired) {
+                fireBullet();
                 lastFired = time + fireRate;
             }
 
             // Update bullets
-            bullets.getChildren().forEach(bullet => {
-                const bulletData = bullet.getData('velocity');
-                bullet.y += bulletData.y;
-                if (bullet.y < 0) {
-                    bullet.destroy();
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].y += bullets[i].vy;
+                if (bullets[i].y < 0) {
+                    bullets.splice(i, 1);
                 }
-            });
+            }
 
             // Update enemy bullets
-            enemyBullets.getChildren().forEach(bullet => {
-                const bulletData = bullet.getData('velocity');
-                bullet.y += bulletData.y;
-                if (bullet.y > 600) {
-                    bullet.destroy();
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                enemyBullets[i].y += enemyBullets[i].vy;
+                if (enemyBullets[i].y > 600) {
+                    enemyBullets.splice(i, 1);
+                    continue;
                 }
                 
                 // Check collision with player
-                if (checkCollision(player, bullet)) {
-                    bullet.destroy();
+                if (checkCollision(player, enemyBullets[i])) {
+                    enemyBullets.splice(i, 1);
                     hitPlayer();
                 }
-            });
+            }
 
             // Update enemies
-            enemies.getChildren().forEach(enemy => {
-                const enemyData = enemy.getData('velocity');
-                enemy.x += enemyData.x;
-                enemy.y += enemyData.y;
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.x += enemy.vx;
+                enemy.y += enemy.vy;
 
                 // Bounce enemies off walls
                 if (enemy.x <= 20 || enemy.x >= 780) {
-                    enemyData.x *= -1;
+                    enemy.vx *= -1;
                 }
                 
                 // Enemy firing
-                if (Math.random() < 0.001) {
-                    fireEnemyBullet(this, enemy);
+                if (Math.random() < 0.01) {
+                    fireEnemyBullet(enemy);
                 }
 
                 // Check collision with player bullets
-                bullets.getChildren().forEach(bullet => {
-                    if (checkCollision(enemy, bullet)) {
-                        bullet.destroy();
-                        destroyEnemy(enemy);
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    if (checkCollision(enemy, bullets[j])) {
+                        bullets.splice(j, 1);
+                        enemies.splice(i, 1);
+                        destroyEnemy();
+                        break;
                     }
-                });
+                }
 
                 // Check collision with player
-                if (checkCollision(player, enemy)) {
-                    destroyEnemy(enemy);
+                if (enemies[i] && checkCollision(player, enemy)) {
+                    enemies.splice(i, 1);
+                    destroyEnemy();
                     hitPlayer();
                     hitPlayer(); // Double damage for collision
                 }
-            });
+            }
 
             // Spawn more enemies
-            if (time > enemySpawnTimer && enemies.getChildren().length < enemiesInWave) {
-                spawnEnemy(this);
+            if (time > enemySpawnTimer && enemies.length < enemiesInWave) {
+                spawnEnemy();
                 enemySpawnTimer = time + enemySpawnRate;
             }
 
-            // Update radar
-            updateRadar();
-
             // Consume energy slowly
-            if (time % 100 === 0) {
+            if (Math.floor(time / 1000) !== Math.floor((time - 16) / 1000)) {
                 energy = Math.max(0, energy - 0.1);
-                updateUI();
                 
                 if (energy <= 0) {
                     endGame('ENERGY DEPLETED!');
@@ -280,52 +322,95 @@
             }
         }
 
-        function fireBullet(scene) {
-            const bullet = scene.add.graphics();
-            bullet.fillStyle(0x00ff00, 1);
-            bullet.fillRect(-2, -8, 4, 16);
-            bullet.x = player.x;
-            bullet.y = player.y - 20;
-            bullet.setDataEnabled();
-            bullet.setData('velocity', { x: 0, y: -10 });
-            bullets.add(bullet);
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 800, 600);
+
+            // Draw stars
+            ctx.fillStyle = '#fff';
+            stars.forEach(star => {
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw player
+            ctx.fillStyle = '#0f0';
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y - player.size);
+            ctx.lineTo(player.x - player.size * 0.7, player.y + player.size);
+            ctx.lineTo(player.x + player.size * 0.7, player.y + player.size);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw bullets
+            ctx.fillStyle = '#0f0';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x - 2, bullet.y - 8, 4, 16);
+            });
+
+            // Draw enemy bullets
+            ctx.fillStyle = '#f00';
+            enemyBullets.forEach(bullet => {
+                ctx.fillRect(bullet.x - 2, bullet.y - 6, 4, 12);
+            });
+
+            // Draw enemies
+            ctx.fillStyle = '#f00';
+            enemies.forEach(enemy => {
+                ctx.beginPath();
+                ctx.moveTo(enemy.x, enemy.y + enemy.size);
+                ctx.lineTo(enemy.x - enemy.size * 0.7, enemy.y - enemy.size * 0.7);
+                ctx.lineTo(enemy.x + enemy.size * 0.7, enemy.y - enemy.size * 0.7);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            // Draw radar
+            drawRadar();
+
+            // Draw UI
+            drawUI();
+        }
+
+        function fireBullet() {
+            bullets.push({
+                x: player.x,
+                y: player.y - 20,
+                vy: -10
+            });
             
             energy = Math.max(0, energy - 0.5);
-            updateUI();
         }
 
-        function fireEnemyBullet(scene, enemy) {
-            const bullet = scene.add.graphics();
-            bullet.fillStyle(0xff0000, 1);
-            bullet.fillRect(-2, -6, 4, 12);
-            bullet.x = enemy.x;
-            bullet.y = enemy.y + 15;
-            bullet.setDataEnabled();
-            bullet.setData('velocity', { x: 0, y: 5 });
-            enemyBullets.add(bullet);
+        function fireEnemyBullet(enemy) {
+            enemyBullets.push({
+                x: enemy.x,
+                y: enemy.y + 15,
+                vy: 5
+            });
         }
 
-        function spawnEnemy(scene) {
-            const enemy = scene.add.graphics();
-            enemy.fillStyle(0xff0000, 1);
-            enemy.fillTriangle(0, 15, -10, -10, 10, -10);
-            enemy.x = Phaser.Math.Between(50, 750);
-            enemy.y = Phaser.Math.Between(50, 200);
-            enemy.setDataEnabled();
-            const vx = Phaser.Math.Between(-2, 2);
-            const vy = Phaser.Math.Between(1, 3);
-            enemy.setData('velocity', { x: vx, y: vy });
-            enemies.add(enemy);
+        function spawnEnemy() {
+            enemies.push({
+                x: Math.random() * 700 + 50,
+                y: Math.random() * 150 + 50,
+                vx: Math.random() * 4 - 2,
+                vy: Math.random() * 2 + 1,
+                size: 10
+            });
         }
 
-        function spawnEnemyWave(scene) {
+        function spawnEnemyWave() {
             for (let i = 0; i < enemiesInWave; i++) {
-                setTimeout(() => spawnEnemy(scene), i * 500);
+                setTimeout(() => spawnEnemy(), i * 500);
             }
         }
 
-        function destroyEnemy(enemy) {
-            enemy.destroy();
+        function destroyEnemy() {
             score += 100;
             enemiesDestroyed++;
             
@@ -343,12 +428,10 @@
                 // Spawn next wave
                 setTimeout(() => {
                     if (!gameOver) {
-                        spawnEnemyWave(game.scene.scenes[0]);
+                        spawnEnemyWave();
                     }
                 }, 2000);
             }
-            
-            updateUI();
         }
 
         function hitPlayer() {
@@ -357,73 +440,72 @@
                 shields = 0;
                 endGame('SHIP DESTROYED!');
             }
-            updateUI();
         }
 
         function checkCollision(obj1, obj2) {
-            const distance = Phaser.Math.Distance.Between(obj1.x, obj1.y, obj2.x, obj2.y);
+            const dx = obj1.x - obj2.x;
+            const dy = obj1.y - obj2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
             return distance < 20;
         }
 
-        function updateUI() {
-            scoreText.setText('SCORE: ' + score);
-            energyText.setText('ENERGY: ' + Math.floor(energy));
-            shieldsText.setText('SHIELDS: ' + Math.floor(shields));
-            sectorsText.setText('SECTORS: ' + sectorsCleared);
+        function drawUI() {
+            ctx.font = '18px monospace';
             
-            // Color code based on levels
-            energyText.setColor(energy > 50 ? '#0f0' : energy > 25 ? '#ff0' : '#f00');
-            shieldsText.setColor(shields > 50 ? '#0f0' : shields > 25 ? '#ff0' : '#f00');
+            // Score
+            ctx.fillStyle = '#0f0';
+            ctx.fillText('SCORE: ' + score, 16, 20);
+            
+            // Energy
+            ctx.fillStyle = energy > 50 ? '#0f0' : energy > 25 ? '#ff0' : '#f00';
+            ctx.fillText('ENERGY: ' + Math.floor(energy), 16, 44);
+            
+            // Shields
+            ctx.fillStyle = shields > 50 ? '#0f0' : shields > 25 ? '#ff0' : '#f00';
+            ctx.fillText('SHIELDS: ' + Math.floor(shields), 16, 68);
+            
+            // Sectors
+            ctx.fillStyle = '#0f0';
+            ctx.fillText('SECTORS: ' + sectorsCleared, 16, 92);
         }
 
         function drawRadar() {
-            radarGraphics.clear();
-            radarGraphics.lineStyle(2, 0x00ff00, 0.5);
-            radarGraphics.strokeRect(650, 450, 140, 140);
-            radarGraphics.fillStyle(0x001100, 0.5);
-            radarGraphics.fillRect(650, 450, 140, 140);
-        }
-
-        function updateRadar() {
-            radarGraphics.clear();
-            drawRadar();
+            // Radar box
+            ctx.strokeStyle = '#0f0';
+            ctx.globalAlpha = 0.5;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(650, 450, 140, 140);
+            ctx.fillStyle = '#001100';
+            ctx.fillRect(650, 450, 140, 140);
+            ctx.globalAlpha = 1;
             
-            // Draw player on radar
-            radarGraphics.fillStyle(0x00ff00, 1);
-            radarGraphics.fillCircle(720, 520, 3);
+            // Draw player on radar (center)
+            ctx.fillStyle = '#0f0';
+            ctx.beginPath();
+            ctx.arc(720, 520, 3, 0, Math.PI * 2);
+            ctx.fill();
             
             // Draw enemies on radar
-            enemies.getChildren().forEach(enemy => {
+            ctx.fillStyle = '#f00';
+            enemies.forEach(enemy => {
                 const radarX = 650 + (enemy.x / 800) * 140;
                 const radarY = 450 + (enemy.y / 600) * 140;
-                radarGraphics.fillStyle(0xff0000, 1);
-                radarGraphics.fillCircle(radarX, radarY, 2);
+                ctx.beginPath();
+                ctx.arc(radarX, radarY, 2, 0, Math.PI * 2);
+                ctx.fill();
             });
         }
 
         function endGame(message) {
             gameOver = true;
             
-            const gameOverText = game.scene.scenes[0].add.text(400, 250, message, {
-                fontSize: '48px',
-                fill: '#f00',
-                fontFamily: 'monospace'
-            });
-            gameOverText.setOrigin(0.5);
-            
-            const finalScoreText = game.scene.scenes[0].add.text(400, 310, 'FINAL SCORE: ' + score, {
-                fontSize: '32px',
-                fill: '#0f0',
-                fontFamily: 'monospace'
-            });
-            finalScoreText.setOrigin(0.5);
-            
-            const restartText = game.scene.scenes[0].add.text(400, 360, 'Press R to Restart', {
-                fontSize: '24px',
-                fill: '#ff0',
-                fontFamily: 'monospace'
-            });
-            restartText.setOrigin(0.5);
+            const gameOverDiv = document.getElementById('gameOver');
+            gameOverDiv.innerHTML = `
+                ${message}<br>
+                <div style="font-size: 32px; margin-top: 20px;">FINAL SCORE: ${score}</div>
+                <div style="font-size: 24px; color: #ff0; margin-top: 20px;">Press R to Restart</div>
+            `;
+            gameOverDiv.style.display = 'block';
             
             // Show restart button on mobile
             if (isTouchDevice()) {
@@ -435,7 +517,6 @@
         }
 
         function restartGame() {
-            game.scene.scenes[0].scene.restart();
             score = 0;
             energy = 100;
             shields = 100;
@@ -445,11 +526,18 @@
             enemiesInWave = 5;
             enemiesDestroyed = 0;
             lastFired = 0;
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            player.x = 400;
+            player.y = 500;
             touchLeft = false;
             touchRight = false;
             touchUp = false;
             touchDown = false;
             touchFire = false;
+            
+            document.getElementById('gameOver').style.display = 'none';
             
             // Hide restart button on mobile
             if (isTouchDevice()) {
@@ -458,6 +546,8 @@
                     restartBtn.style.display = 'none';
                 }
             }
+            
+            spawnEnemyWave();
         }
 
         function isTouchDevice() {
@@ -466,54 +556,13 @@
                    (navigator.msMaxTouchPoints > 0);
         }
 
-        function setupTouchControls(scene) {
-            // Create touch control overlay
-            const controlsDiv = document.createElement('div');
-            controlsDiv.id = 'touchControls';
-            controlsDiv.style.cssText = `
-                display: block;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                height: 220px;
-                pointer-events: none;
-            `;
-            document.body.appendChild(controlsDiv);
-
-            // Create directional pad
-            const createButton = (id, label, style) => {
-                const btn = document.createElement('div');
-                btn.id = id;
-                btn.className = 'touch-btn';
-                btn.textContent = label;
-                btn.style.cssText = `
-                    position: absolute;
-                    background: rgba(0, 255, 0, 0.2);
-                    border: 2px solid rgba(0, 255, 0, 0.5);
-                    border-radius: 10px;
-                    color: #0f0;
-                    font-size: 24px;
-                    font-weight: bold;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    pointer-events: auto;
-                    user-select: none;
-                    -webkit-user-select: none;
-                    touch-action: none;
-                    ${style}
-                `;
-                controlsDiv.appendChild(btn);
-                return btn;
-            };
-
-            const leftBtn = createButton('leftBtn', '←', 'left: 10px; bottom: 70px; width: 70px; height: 70px;');
-            const rightBtn = createButton('rightBtn', '→', 'left: 90px; bottom: 70px; width: 70px; height: 70px;');
-            const upBtn = createButton('upBtn', '↑', 'left: 50px; bottom: 150px; width: 70px; height: 70px;');
-            const downBtn = createButton('downBtn', '↓', 'left: 50px; bottom: 10px; width: 70px; height: 70px;');
-            const fireBtn = createButton('fireBtn', 'FIRE', 'right: 10px; bottom: 70px; width: 90px; height: 90px;');
-            const restartBtn = createButton('restartBtn', 'RESTART', 'left: 50%; transform: translateX(-50%); bottom: 10px; width: 100px; height: 50px; font-size: 16px; display: none;');
+        function setupTouchControls() {
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+            const upBtn = document.getElementById('upBtn');
+            const downBtn = document.getElementById('downBtn');
+            const fireBtn = document.getElementById('fireBtn');
+            const restartBtn = document.getElementById('restartBtn');
 
             // Touch event handlers
             const addTouchHandlers = (btn, onStart, onEnd) => {
@@ -549,6 +598,9 @@
                 }
             }, { passive: false });
         }
+
+        // Start the game
+        init();
     </script>
 </body>
 </html>

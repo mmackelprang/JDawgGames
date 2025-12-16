@@ -4,7 +4,7 @@ This file lists all available games in the JDawg Games collection. To add a new 
 
 ## Available Games
 
-## Phaser Games
+## Advanced Games
 
 ### Star Raiders
 - **File:** `starraiders.html`
