@@ -19,6 +19,36 @@ A mobile-friendly clone of the classic Atari 800 space combat game! Defend secto
 - **Controls:** Arrow keys to move, Space to fire, R to restart (touch controls available on mobile)
 - **Features:** Progressive difficulty, tactical radar display, energy/shield management, wave-based gameplay
 
+### 👾 Pac-Man (Phaser Edition)
+A Phaser-based recreation of the classic arcade maze game! Navigate the maze, collect pellets, eat power pellets to turn the tables on ghosts, and rack up the high score!
+- **Play:** [pacman_phaser.html](pacman_phaser.html)
+- **Controls:** Arrow keys to move, R to restart (touch controls available on mobile)
+- **Features:** Classic maze layout, ghost AI, power pellets, progressive difficulty
+
+### 🦔 Sonic Run (Phaser Edition)
+A Phaser-based endless runner! Jump over obstacles, collect rings, and see how far you can go in this fast-paced action game!
+- **Play:** [sonic_phaser.html](sonic_phaser.html)
+- **Controls:** W/Up to jump, Space to roll, R to restart (touch controls available on mobile)
+- **Features:** Progressive speed increase, ring collection, enemy obstacles, jump mechanics
+
+### 🍄 Super Mario Bros (Phaser Edition)
+A Phaser-based platformer recreation! Jump on enemies, hit question blocks for coins, navigate platforms and pipes in classic Mario style!
+- **Play:** [mario_phaser.html](mario_phaser.html)
+- **Controls:** Arrows to move, W/Up to jump, Shift to run, R to restart (touch controls available on mobile)
+- **Features:** Platform jumping, question blocks, coins, enemies, running mechanics
+
+### 🎮 Battlezone (Phaser Edition)
+A Phaser-based first-person tank combat game! Navigate a 3D wireframe battlefield, destroy enemy tanks, and survive as long as possible!
+- **Play:** [battlezone_phaser.html](battlezone_phaser.html)
+- **Controls:** Arrows to move/turn, Space to fire, R to restart (touch controls available on mobile)
+- **Features:** 3D perspective view, radar display, enemy AI, vector graphics style
+
+### 🏎️ Night Driver (Phaser Edition)
+A Phaser-based night racing game! Steer through the darkness at high speed, avoid obstacles, and see how far you can drive!
+- **Play:** [night_driver_phaser.html](night_driver_phaser.html)
+- **Controls:** Left/Right to steer, Up/Down for gas/brake, R to restart (touch controls available on mobile)
+- **Features:** Perspective road rendering, speed management, obstacle avoidance, distance tracking
+
 ## 🎯 Classic Canvas Games
 
 ### 🏎️ Night Driver

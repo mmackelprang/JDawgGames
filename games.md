@@ -12,6 +12,36 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **Controls:** Arrow keys to move, Space to fire, R to restart (touch controls available on mobile)
 - **Play:** [Star Raiders](starraiders.html)
 
+### Pac-Man (Phaser Edition)
+- **File:** `pacman_phaser.html`
+- **Description:** A Phaser-based recreation of the classic arcade maze game! Navigate the maze, collect pellets, eat power pellets to turn the tables on ghosts, and rack up the high score!
+- **Controls:** Arrow keys to move, R to restart (touch controls available on mobile)
+- **Play:** [Pac-Man Phaser](pacman_phaser.html)
+
+### Sonic Run (Phaser Edition)
+- **File:** `sonic_phaser.html`
+- **Description:** A Phaser-based endless runner! Jump over obstacles, collect rings, and see how far you can go in this fast-paced action game!
+- **Controls:** W/Up to jump, Space to roll, R to restart (touch controls available on mobile)
+- **Play:** [Sonic Run Phaser](sonic_phaser.html)
+
+### Super Mario Bros (Phaser Edition)
+- **File:** `mario_phaser.html`
+- **Description:** A Phaser-based platformer recreation! Jump on enemies, hit question blocks for coins, navigate platforms and pipes in classic Mario style!
+- **Controls:** Arrows to move, W/Up to jump, Shift to run, R to restart (touch controls available on mobile)
+- **Play:** [Super Mario Phaser](mario_phaser.html)
+
+### Battlezone (Phaser Edition)
+- **File:** `battlezone_phaser.html`
+- **Description:** A Phaser-based first-person tank combat game! Navigate a 3D wireframe battlefield, destroy enemy tanks, and survive as long as possible!
+- **Controls:** Arrows to move/turn, Space to fire, R to restart (touch controls available on mobile)
+- **Play:** [Battlezone Phaser](battlezone_phaser.html)
+
+### Night Driver (Phaser Edition)
+- **File:** `night_driver_phaser.html`
+- **Description:** A Phaser-based night racing game! Steer through the darkness at high speed, avoid obstacles, and see how far you can drive!
+- **Controls:** Left/Right to steer, Up/Down for gas/brake, R to restart (touch controls available on mobile)
+- **Play:** [Night Driver Phaser](night_driver_phaser.html)
+
 ## Classic Canvas Games
 
 ### Night Driver
