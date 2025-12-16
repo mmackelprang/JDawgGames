@@ -70,6 +70,7 @@
         let playerAngle = 0;
         let playerX = 400;
         let playerZ = 0; // Simulated depth
+        let touchControls = { left: false, right: false, up: false, down: false, fire: false };
 
         function preload() {
             // No external assets needed - using graphics
@@ -165,6 +166,26 @@
             radarGraphics = this.add.graphics();
             radarGraphics.setDepth(1000);
 
+            // Create textures for enemies and obstacles
+            const enemyGraphics = this.add.graphics();
+            enemyGraphics.lineStyle(2, 0xff0000);
+            enemyGraphics.strokeRect(-15, -10, 30, 20);
+            enemyGraphics.strokeRect(-5, -15, 10, 5);
+            enemyGraphics.generateTexture('enemy', 40, 30);
+            enemyGraphics.destroy();
+
+            const obstacleGraphics = this.add.graphics();
+            obstacleGraphics.lineStyle(2, 0x00ff00);
+            obstacleGraphics.strokeRect(-10, -20, 20, 40);
+            obstacleGraphics.generateTexture('obstacle', 30, 50);
+            obstacleGraphics.destroy();
+
+            const bulletGraphics = this.add.graphics();
+            bulletGraphics.fillStyle(0x00ff00);
+            bulletGraphics.fillCircle(0, 0, 3);
+            bulletGraphics.generateTexture('bullet', 6, 6);
+            bulletGraphics.destroy();
+
             // Spawn initial enemies
             this.time.addEvent({
                 delay: 3000,
@@ -186,24 +207,24 @@
         function update(time) {
             if (gameOver) return;
 
-            // Player rotation
-            if (cursors.left.isDown) {
+            // Player rotation (check both keyboard and touch controls)
+            if (cursors.left.isDown || touchControls.left) {
                 playerAngle -= 0.05;
-            } else if (cursors.right.isDown) {
+            } else if (cursors.right.isDown || touchControls.right) {
                 playerAngle += 0.05;
             }
 
             // Player movement (forward/backward)
-            if (cursors.up.isDown) {
+            if (cursors.up.isDown || touchControls.up) {
                 playerX += Math.sin(playerAngle) * 3;
                 playerZ += Math.cos(playerAngle) * 3;
-            } else if (cursors.down.isDown) {
+            } else if (cursors.down.isDown || touchControls.down) {
                 playerX -= Math.sin(playerAngle) * 2;
                 playerZ -= Math.cos(playerAngle) * 2;
             }
 
             // Fire bullets
-            if (fireKey.isDown && time > lastFireTime + 500) {
+            if ((fireKey.isDown || touchControls.fire) && time > lastFireTime + 500) {
                 fireBullet(this);
                 lastFireTime = time;
             }
@@ -233,13 +254,6 @@
         function spawnEnemy(scene) {
             if (gameOver) return;
 
-            const enemyGraphics = scene.add.graphics();
-            enemyGraphics.lineStyle(2, 0xff0000);
-            enemyGraphics.strokeRect(-15, -10, 30, 20);
-            enemyGraphics.strokeRect(-5, -15, 10, 5);
-            enemyGraphics.generateTexture('enemy', 40, 30);
-            enemyGraphics.destroy();
-
             const angle = Phaser.Math.Between(0, 360) * Math.PI / 180;
             const distance = Phaser.Math.Between(200, 500);
             
@@ -253,12 +267,6 @@
         }
 
         function spawnObstacle(scene) {
-            const obstacleGraphics = scene.add.graphics();
-            obstacleGraphics.lineStyle(2, 0x00ff00);
-            obstacleGraphics.strokeRect(-10, -20, 20, 40);
-            obstacleGraphics.generateTexture('obstacle', 30, 50);
-            obstacleGraphics.destroy();
-
             const angle = Phaser.Math.Between(0, 360) * Math.PI / 180;
             const distance = Phaser.Math.Between(150, 600);
             
@@ -329,12 +337,6 @@
         }
 
         function fireBullet(scene) {
-            const bulletGraphics = scene.add.graphics();
-            bulletGraphics.fillStyle(0x00ff00);
-            bulletGraphics.fillCircle(0, 0, 3);
-            bulletGraphics.generateTexture('bullet', 6, 6);
-            bulletGraphics.destroy();
-
             const bullet = scene.physics.add.sprite(400, 250, 'bullet');
             bullets.add(bullet);
             bullet.setVelocityY(-400);
@@ -411,33 +413,33 @@
             const leftBtn = scene.add.circle(60, 480, buttonSize/2, buttonColor, buttonAlpha);
             leftBtn.setScrollFactor(0);
             leftBtn.setInteractive();
-            leftBtn.on('pointerdown', () => { cursors.left.isDown = true; });
-            leftBtn.on('pointerup', () => { cursors.left.isDown = false; });
-            leftBtn.on('pointerout', () => { cursors.left.isDown = false; });
+            leftBtn.on('pointerdown', () => { touchControls.left = true; });
+            leftBtn.on('pointerup', () => { touchControls.left = false; });
+            leftBtn.on('pointerout', () => { touchControls.left = false; });
 
             // Right button
             const rightBtn = scene.add.circle(180, 480, buttonSize/2, buttonColor, buttonAlpha);
             rightBtn.setScrollFactor(0);
             rightBtn.setInteractive();
-            rightBtn.on('pointerdown', () => { cursors.right.isDown = true; });
-            rightBtn.on('pointerup', () => { cursors.right.isDown = false; });
-            rightBtn.on('pointerout', () => { cursors.right.isDown = false; });
+            rightBtn.on('pointerdown', () => { touchControls.right = true; });
+            rightBtn.on('pointerup', () => { touchControls.right = false; });
+            rightBtn.on('pointerout', () => { touchControls.right = false; });
 
             // Up button
             const upBtn = scene.add.circle(120, 420, buttonSize/2, buttonColor, buttonAlpha);
             upBtn.setScrollFactor(0);
             upBtn.setInteractive();
-            upBtn.on('pointerdown', () => { cursors.up.isDown = true; });
-            upBtn.on('pointerup', () => { cursors.up.isDown = false; });
-            upBtn.on('pointerout', () => { cursors.up.isDown = false; });
+            upBtn.on('pointerdown', () => { touchControls.up = true; });
+            upBtn.on('pointerup', () => { touchControls.up = false; });
+            upBtn.on('pointerout', () => { touchControls.up = false; });
 
             // Down button
             const downBtn = scene.add.circle(120, 540, buttonSize/2, buttonColor, buttonAlpha);
             downBtn.setScrollFactor(0);
             downBtn.setInteractive();
-            downBtn.on('pointerdown', () => { cursors.down.isDown = true; });
-            downBtn.on('pointerup', () => { cursors.down.isDown = false; });
-            downBtn.on('pointerout', () => { cursors.down.isDown = false; });
+            downBtn.on('pointerdown', () => { touchControls.down = true; });
+            downBtn.on('pointerup', () => { touchControls.down = false; });
+            downBtn.on('pointerout', () => { touchControls.down = false; });
 
             // Fire button
             const fireBtn = scene.add.circle(640, 480, buttonSize/2, buttonColor, buttonAlpha);
@@ -450,9 +452,9 @@
             });
             fireText.setOrigin(0.5);
             fireText.setScrollFactor(0);
-            fireBtn.on('pointerdown', () => { fireKey.isDown = true; });
-            fireBtn.on('pointerup', () => { fireKey.isDown = false; });
-            fireBtn.on('pointerout', () => { fireKey.isDown = false; });
+            fireBtn.on('pointerdown', () => { touchControls.fire = true; });
+            fireBtn.on('pointerup', () => { touchControls.fire = false; });
+            fireBtn.on('pointerout', () => { touchControls.fire = false; });
         }
     </script>
 </body>

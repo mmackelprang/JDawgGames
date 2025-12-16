@@ -201,6 +201,7 @@
             enemies.add(enemy);
             enemy.setVelocityX(-gameSpeed * 50);
             enemy.body.immovable = true;
+            enemy.body.allowGravity = false;
         }
 
         function spawnRing() {
@@ -215,6 +216,7 @@
             const ring = this.physics.add.sprite(850, Phaser.Math.Between(400, 500), 'ring');
             rings.add(ring);
             ring.setVelocityX(-gameSpeed * 50);
+            ring.body.allowGravity = false;
         }
 
         function collectRing(player, ring) {
