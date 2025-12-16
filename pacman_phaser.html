@@ -274,16 +274,16 @@
 
             // Clear existing timer
             if (powerModeTimer) {
-                clearTimeout(powerModeTimer);
+                powerModeTimer.remove();
             }
 
-            // Set timer to end power mode
-            powerModeTimer = setTimeout(() => {
+            // Set timer to end power mode using Phaser's timer system
+            powerModeTimer = game.scene.scenes[0].time.delayedCall(7000, () => {
                 powerMode = false;
                 ghosts.children.entries.forEach(ghost => {
                     ghost.clearTint();
                 });
-            }, 7000);
+            });
         }
 
         function hitGhost(player, ghost) {
