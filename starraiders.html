@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Raiders - JDawg Games</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        // Game configuration
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#000000',
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        // Game variables
+        let player;
+        let cursors;
+        let enemies;
+        let bullets;
+        let enemyBullets;
+        let stars;
+        let score = 0;
+        let energy = 100;
+        let shields = 100;
+        let sectorsCleared = 0;
+        let scoreText;
+        let energyText;
+        let shieldsText;
+        let sectorsText;
+        let gameOver = false;
+        let fireButton;
+        let lastFired = 0;
+        let fireRate = 250;
+        let radarGraphics;
+        let radarEnemies = [];
+        let enemySpawnTimer = 0;
+        let enemySpawnRate = 2000;
+        let waveNumber = 1;
+        let enemiesInWave = 5;
+        let enemiesDestroyed = 0;
+        
+        // Touch controls
+        let touchLeft = false;
+        let touchRight = false;
+        let touchUp = false;
+        let touchDown = false;
+        let touchFire = false;
+
+        function preload() {
+            // Create simple graphics for game objects
+            // We'll use graphics instead of loading images for simplicity
+        }
+
+        function create() {
+            // Create starfield background
+            stars = this.add.group();
+            for (let i = 0; i < 100; i++) {
+                const x = Phaser.Math.Between(0, 800);
+                const y = Phaser.Math.Between(0, 600);
+                const star = this.add.circle(x, y, 1, 0xffffff, 0.8);
+                stars.add(star);
+            }
+
+            // Create player ship
+            player = this.add.graphics();
+            player.fillStyle(0x00ff00, 1);
+            player.fillTriangle(0, -15, -10, 15, 10, 15);
+            player.x = 400;
+            player.y = 500;
+            player.setDataEnabled();
+            player.setData('velocity', { x: 0, y: 0 });
+            player.setData('active', true);
+
+            // Create groups
+            enemies = this.add.group();
+            bullets = this.add.group();
+            enemyBullets = this.add.group();
+
+            // Create radar display
+            radarGraphics = this.add.graphics();
+            drawRadar();
+
+            // Input setup
+            cursors = this.input.keyboard.createCursorKeys();
+            fireButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+            
+            // R key to restart
+            this.input.keyboard.on('keydown-R', () => {
+                if (gameOver) {
+                    restartGame();
+                }
+            });
+
+            // UI Text
+            scoreText = this.add.text(16, 16, 'SCORE: 0', { 
+                fontSize: '18px', 
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            energyText = this.add.text(16, 40, 'ENERGY: 100', { 
+                fontSize: '18px', 
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            shieldsText = this.add.text(16, 64, 'SHIELDS: 100', { 
+                fontSize: '18px', 
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            sectorsText = this.add.text(16, 88, 'SECTORS: 0', { 
+                fontSize: '18px', 
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            // Spawn initial enemies
+            spawnEnemyWave(this);
+
+            // Setup touch controls for mobile
+            if (isTouchDevice()) {
+                setupTouchControls(this);
+            }
+        }
+
+        function update(time) {
+            if (gameOver) {
+                return;
+            }
+
+            // Player movement
+            const playerData = player.getData('velocity');
+            const speed = 5;
+            
+            if (cursors.left.isDown || touchLeft) {
+                playerData.x = -speed;
+            } else if (cursors.right.isDown || touchRight) {
+                playerData.x = speed;
+            } else {
+                playerData.x = 0;
+            }
+
+            if (cursors.up.isDown || touchUp) {
+                playerData.y = -speed;
+            } else if (cursors.down.isDown || touchDown) {
+                playerData.y = speed;
+            } else {
+                playerData.y = 0;
+            }
+
+            player.x += playerData.x;
+            player.y += playerData.y;
+
+            // Keep player in bounds
+            player.x = Phaser.Math.Clamp(player.x, 20, 780);
+            player.y = Phaser.Math.Clamp(player.y, 20, 580);
+
+            // Firing
+            if ((fireButton.isDown || touchFire) && time > lastFired) {
+                fireBullet(this);
+                lastFired = time + fireRate;
+            }
+
+            // Update bullets
+            bullets.getChildren().forEach(bullet => {
+                const bulletData = bullet.getData('velocity');
+                bullet.y += bulletData.y;
+                if (bullet.y < 0) {
+                    bullet.destroy();
+                }
+            });
+
+            // Update enemy bullets
+            enemyBullets.getChildren().forEach(bullet => {
+                const bulletData = bullet.getData('velocity');
+                bullet.y += bulletData.y;
+                if (bullet.y > 600) {
+                    bullet.destroy();
+                }
+                
+                // Check collision with player
+                if (checkCollision(player, bullet)) {
+                    bullet.destroy();
+                    hitPlayer();
+                }
+            });
+
+            // Update enemies
+            enemies.getChildren().forEach(enemy => {
+                const enemyData = enemy.getData('velocity');
+                enemy.x += enemyData.x;
+                enemy.y += enemyData.y;
+
+                // Bounce enemies off walls
+                if (enemy.x <= 20 || enemy.x >= 780) {
+                    enemyData.x *= -1;
+                }
+                
+                // Enemy firing
+                if (Math.random() < 0.001) {
+                    fireEnemyBullet(this, enemy);
+                }
+
+                // Check collision with player bullets
+                bullets.getChildren().forEach(bullet => {
+                    if (checkCollision(enemy, bullet)) {
+                        bullet.destroy();
+                        destroyEnemy(enemy);
+                    }
+                });
+
+                // Check collision with player
+                if (checkCollision(player, enemy)) {
+                    destroyEnemy(enemy);
+                    hitPlayer();
+                    hitPlayer(); // Double damage for collision
+                }
+            });
+
+            // Spawn more enemies
+            if (time > enemySpawnTimer && enemies.getChildren().length < enemiesInWave) {
+                spawnEnemy(this);
+                enemySpawnTimer = time + enemySpawnRate;
+            }
+
+            // Update radar
+            updateRadar();
+
+            // Consume energy slowly
+            if (time % 100 === 0) {
+                energy = Math.max(0, energy - 0.1);
+                updateUI();
+                
+                if (energy <= 0) {
+                    endGame('ENERGY DEPLETED!');
+                }
+            }
+        }
+
+        function fireBullet(scene) {
+            const bullet = scene.add.graphics();
+            bullet.fillStyle(0x00ff00, 1);
+            bullet.fillRect(-2, -8, 4, 16);
+            bullet.x = player.x;
+            bullet.y = player.y - 20;
+            bullet.setDataEnabled();
+            bullet.setData('velocity', { x: 0, y: -10 });
+            bullets.add(bullet);
+            
+            energy = Math.max(0, energy - 0.5);
+            updateUI();
+        }
+
+        function fireEnemyBullet(scene, enemy) {
+            const bullet = scene.add.graphics();
+            bullet.fillStyle(0xff0000, 1);
+            bullet.fillRect(-2, -6, 4, 12);
+            bullet.x = enemy.x;
+            bullet.y = enemy.y + 15;
+            bullet.setDataEnabled();
+            bullet.setData('velocity', { x: 0, y: 5 });
+            enemyBullets.add(bullet);
+        }
+
+        function spawnEnemy(scene) {
+            const enemy = scene.add.graphics();
+            enemy.fillStyle(0xff0000, 1);
+            enemy.fillTriangle(0, 15, -10, -10, 10, -10);
+            enemy.x = Phaser.Math.Between(50, 750);
+            enemy.y = Phaser.Math.Between(50, 200);
+            enemy.setDataEnabled();
+            const vx = Phaser.Math.Between(-2, 2);
+            const vy = Phaser.Math.Between(1, 3);
+            enemy.setData('velocity', { x: vx, y: vy });
+            enemies.add(enemy);
+        }
+
+        function spawnEnemyWave(scene) {
+            for (let i = 0; i < enemiesInWave; i++) {
+                setTimeout(() => spawnEnemy(scene), i * 500);
+            }
+        }
+
+        function destroyEnemy(enemy) {
+            enemy.destroy();
+            score += 100;
+            enemiesDestroyed++;
+            
+            // Check if wave is cleared
+            if (enemiesDestroyed >= enemiesInWave) {
+                sectorsCleared++;
+                waveNumber++;
+                enemiesInWave = Math.min(waveNumber * 3 + 2, 15);
+                enemiesDestroyed = 0;
+                
+                // Restore some energy and shields
+                energy = Math.min(100, energy + 20);
+                shields = Math.min(100, shields + 30);
+                
+                // Spawn next wave
+                setTimeout(() => {
+                    if (!gameOver) {
+                        spawnEnemyWave(game.scene.scenes[0]);
+                    }
+                }, 2000);
+            }
+            
+            updateUI();
+        }
+
+        function hitPlayer() {
+            shields -= 10;
+            if (shields <= 0) {
+                shields = 0;
+                endGame('SHIP DESTROYED!');
+            }
+            updateUI();
+        }
+
+        function checkCollision(obj1, obj2) {
+            const distance = Phaser.Math.Distance.Between(obj1.x, obj1.y, obj2.x, obj2.y);
+            return distance < 20;
+        }
+
+        function updateUI() {
+            scoreText.setText('SCORE: ' + score);
+            energyText.setText('ENERGY: ' + Math.floor(energy));
+            shieldsText.setText('SHIELDS: ' + Math.floor(shields));
+            sectorsText.setText('SECTORS: ' + sectorsCleared);
+            
+            // Color code based on levels
+            energyText.setColor(energy > 50 ? '#0f0' : energy > 25 ? '#ff0' : '#f00');
+            shieldsText.setColor(shields > 50 ? '#0f0' : shields > 25 ? '#ff0' : '#f00');
+        }
+
+        function drawRadar() {
+            radarGraphics.clear();
+            radarGraphics.lineStyle(2, 0x00ff00, 0.5);
+            radarGraphics.strokeRect(650, 450, 140, 140);
+            radarGraphics.fillStyle(0x001100, 0.5);
+            radarGraphics.fillRect(650, 450, 140, 140);
+        }
+
+        function updateRadar() {
+            radarGraphics.clear();
+            drawRadar();
+            
+            // Draw player on radar
+            radarGraphics.fillStyle(0x00ff00, 1);
+            radarGraphics.fillCircle(720, 520, 3);
+            
+            // Draw enemies on radar
+            enemies.getChildren().forEach(enemy => {
+                const radarX = 650 + (enemy.x / 800) * 140;
+                const radarY = 450 + (enemy.y / 600) * 140;
+                radarGraphics.fillStyle(0xff0000, 1);
+                radarGraphics.fillCircle(radarX, radarY, 2);
+            });
+        }
+
+        function endGame(message) {
+            gameOver = true;
+            
+            const gameOverText = game.scene.scenes[0].add.text(400, 250, message, {
+                fontSize: '48px',
+                fill: '#f00',
+                fontFamily: 'monospace'
+            });
+            gameOverText.setOrigin(0.5);
+            
+            const finalScoreText = game.scene.scenes[0].add.text(400, 310, 'FINAL SCORE: ' + score, {
+                fontSize: '32px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            finalScoreText.setOrigin(0.5);
+            
+            const restartText = game.scene.scenes[0].add.text(400, 360, 'Press R to Restart', {
+                fontSize: '24px',
+                fill: '#ff0',
+                fontFamily: 'monospace'
+            });
+            restartText.setOrigin(0.5);
+            
+            // Show restart button on mobile
+            if (isTouchDevice()) {
+                const restartBtn = document.getElementById('restartBtn');
+                if (restartBtn) {
+                    restartBtn.style.display = 'flex';
+                }
+            }
+        }
+
+        function restartGame() {
+            game.scene.scenes[0].scene.restart();
+            score = 0;
+            energy = 100;
+            shields = 100;
+            sectorsCleared = 0;
+            gameOver = false;
+            waveNumber = 1;
+            enemiesInWave = 5;
+            enemiesDestroyed = 0;
+            lastFired = 0;
+            touchLeft = false;
+            touchRight = false;
+            touchUp = false;
+            touchDown = false;
+            touchFire = false;
+            
+            // Hide restart button on mobile
+            if (isTouchDevice()) {
+                const restartBtn = document.getElementById('restartBtn');
+                if (restartBtn) {
+                    restartBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function isTouchDevice() {
+            return ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0) || 
+                   (navigator.msMaxTouchPoints > 0);
+        }
+
+        function setupTouchControls(scene) {
+            // Create touch control overlay
+            const controlsDiv = document.createElement('div');
+            controlsDiv.id = 'touchControls';
+            controlsDiv.style.cssText = `
+                display: block;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 220px;
+                pointer-events: none;
+            `;
+            document.body.appendChild(controlsDiv);
+
+            // Create directional pad
+            const createButton = (id, label, style) => {
+                const btn = document.createElement('div');
+                btn.id = id;
+                btn.className = 'touch-btn';
+                btn.textContent = label;
+                btn.style.cssText = `
+                    position: absolute;
+                    background: rgba(0, 255, 0, 0.2);
+                    border: 2px solid rgba(0, 255, 0, 0.5);
+                    border-radius: 10px;
+                    color: #0f0;
+                    font-size: 24px;
+                    font-weight: bold;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    pointer-events: auto;
+                    user-select: none;
+                    -webkit-user-select: none;
+                    touch-action: none;
+                    ${style}
+                `;
+                controlsDiv.appendChild(btn);
+                return btn;
+            };
+
+            const leftBtn = createButton('leftBtn', '←', 'left: 10px; bottom: 70px; width: 70px; height: 70px;');
+            const rightBtn = createButton('rightBtn', '→', 'left: 90px; bottom: 70px; width: 70px; height: 70px;');
+            const upBtn = createButton('upBtn', '↑', 'left: 50px; bottom: 150px; width: 70px; height: 70px;');
+            const downBtn = createButton('downBtn', '↓', 'left: 50px; bottom: 10px; width: 70px; height: 70px;');
+            const fireBtn = createButton('fireBtn', 'FIRE', 'right: 10px; bottom: 70px; width: 90px; height: 90px;');
+            const restartBtn = createButton('restartBtn', 'RESTART', 'left: 50%; transform: translateX(-50%); bottom: 10px; width: 100px; height: 50px; font-size: 16px; display: none;');
+
+            // Touch event handlers
+            const addTouchHandlers = (btn, onStart, onEnd) => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    btn.style.background = 'rgba(0, 255, 0, 0.4)';
+                    onStart();
+                }, { passive: false });
+                
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    btn.style.background = 'rgba(0, 255, 0, 0.2)';
+                    onEnd();
+                }, { passive: false });
+                
+                btn.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    btn.style.background = 'rgba(0, 255, 0, 0.2)';
+                    onEnd();
+                }, { passive: false });
+            };
+
+            addTouchHandlers(leftBtn, () => touchLeft = true, () => touchLeft = false);
+            addTouchHandlers(rightBtn, () => touchRight = true, () => touchRight = false);
+            addTouchHandlers(upBtn, () => touchUp = true, () => touchUp = false);
+            addTouchHandlers(downBtn, () => touchDown = true, () => touchDown = false);
+            addTouchHandlers(fireBtn, () => touchFire = true, () => touchFire = false);
+            
+            restartBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (gameOver) {
+                    restartGame();
+                }
+            }, { passive: false });
+        }
+    </script>
+</body>
+</html>
