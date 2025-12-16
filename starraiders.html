@@ -160,6 +160,7 @@
         let enemiesInWave = 5;
         let enemiesDestroyed = 0;
         let lastTime = 0;
+        let lastEnergyDrain = 0;
         
         // Touch controls
         let touchLeft = false;
@@ -312,9 +313,10 @@
                 enemySpawnTimer = time + enemySpawnRate;
             }
 
-            // Consume energy slowly
-            if (Math.floor(time / 1000) !== Math.floor((time - 16) / 1000)) {
+            // Consume energy slowly (every second)
+            if (time - lastEnergyDrain >= 1000) {
                 energy = Math.max(0, energy - 0.1);
+                lastEnergyDrain = time;
                 
                 if (energy <= 0) {
                     endGame('ENERGY DEPLETED!');
@@ -536,6 +538,7 @@
             touchUp = false;
             touchDown = false;
             touchFire = false;
+            lastEnergyDrain = 0;
             
             document.getElementById('gameOver').style.display = 'none';
             
