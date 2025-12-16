@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Driver - Phaser Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #game-container {
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#000033',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+
+        const game = new Phaser.Game(config);
+        
+        let player;
+        let cursors;
+        let roadMarkers;
+        let obstacles;
+        let score = 0;
+        let speed = 0;
+        let maxSpeed = 10;
+        let distance = 0;
+        let scoreText;
+        let speedText;
+        let distanceText;
+        let gameOver = false;
+        let roadOffset = 0;
+        let roadCurve = 0;
+        let playerX = 400;
+        let lastObstacleZ = 0;
+
+        function preload() {
+            // No external assets needed - using graphics
+        }
+
+        function create() {
+            // Create stars in the sky
+            for (let i = 0; i < 100; i++) {
+                const star = this.add.circle(
+                    Phaser.Math.Between(0, 800),
+                    Phaser.Math.Between(0, 200),
+                    1,
+                    0xffffff
+                );
+            }
+
+            // Create road markers group
+            roadMarkers = this.add.group();
+            
+            // Create initial road markers
+            for (let i = 0; i < 20; i++) {
+                createRoadMarker(this, i * 30);
+            }
+
+            // Create obstacles group
+            obstacles = this.physics.add.group();
+
+            // Create player car (bottom view)
+            player = this.add.rectangle(400, 500, 30, 50, 0xff0000);
+            player.setDepth(1000);
+
+            // Setup controls
+            cursors = this.input.keyboard.createCursorKeys();
+            this.input.keyboard.on('keydown-R', restartGame, this);
+
+            // Setup touch controls for mobile
+            if (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) {
+                setupTouchControls(this);
+            }
+
+            // UI Text
+            scoreText = this.add.text(16, 16, 'SCORE: 0', {
+                fontSize: '20px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            speedText = this.add.text(16, 40, 'SPEED: 0', {
+                fontSize: '20px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            distanceText = this.add.text(16, 64, 'DISTANCE: 0', {
+                fontSize: '20px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            this.add.text(16, 570, 'Arrows: Steer/Speed | R: Restart', {
+                fontSize: '14px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            // Draw dashboard
+            const dashboard = this.add.rectangle(400, 550, 800, 100, 0x333333);
+            dashboard.setDepth(999);
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Speed control
+            if (cursors.up.isDown) {
+                speed = Math.min(speed + 0.1, maxSpeed);
+            } else if (cursors.down.isDown) {
+                speed = Math.max(speed - 0.2, 0);
+            } else {
+                speed = Math.max(speed - 0.05, 0);
+            }
+
+            // Steering
+            if (cursors.left.isDown) {
+                playerX = Math.max(playerX - 5, 250);
+            } else if (cursors.right.isDown) {
+                playerX = Math.min(playerX + 5, 550);
+            }
+
+            player.x = playerX;
+
+            // Update distance and score
+            distance += speed * 0.1;
+            score = Math.floor(distance);
+            scoreText.setText('SCORE: ' + score);
+            speedText.setText('SPEED: ' + Math.floor(speed * 10));
+            distanceText.setText('DISTANCE: ' + Math.floor(distance));
+
+            // Create road curves
+            if (Phaser.Math.Between(0, 200) < 5) {
+                roadCurve = Phaser.Math.Between(-2, 2);
+            }
+            roadOffset += roadCurve * 0.1;
+
+            // Update road markers
+            roadMarkers.children.entries.forEach(marker => {
+                const z = marker.getData('z');
+                const newZ = z - speed;
+                
+                if (newZ < -30) {
+                    marker.setData('z', newZ + 600);
+                } else {
+                    marker.setData('z', newZ);
+                }
+                
+                updateMarkerPosition(marker);
+            });
+
+            // Spawn obstacles
+            if (distance - lastObstacleZ > 100) {
+                if (Phaser.Math.Between(0, 100) < 30) {
+                    spawnObstacle(this);
+                    lastObstacleZ = distance;
+                }
+            }
+
+            // Update obstacles
+            obstacles.children.entries.forEach(obstacle => {
+                const z = obstacle.getData('z');
+                const newZ = z - speed;
+                
+                if (newZ < -30) {
+                    obstacle.destroy();
+                } else {
+                    obstacle.setData('z', newZ);
+                    updateObstaclePosition(obstacle);
+                    
+                    // Check collision
+                    if (newZ < 50 && newZ > 0) {
+                        const dx = Math.abs(obstacle.x - playerX);
+                        if (dx < 40) {
+                            endGame(this);
+                        }
+                    }
+                }
+            });
+
+            // Check if player is off road
+            if (playerX < 280 || playerX > 520) {
+                speed = Math.max(speed - 0.5, 0);
+            }
+        }
+
+        function createRoadMarker(scene, z) {
+            // Left marker
+            const leftMarker = scene.add.rectangle(0, 0, 8, 30, 0xffffff);
+            roadMarkers.add(leftMarker);
+            leftMarker.setData('z', z);
+            leftMarker.setData('side', 'left');
+            
+            // Right marker
+            const rightMarker = scene.add.rectangle(0, 0, 8, 30, 0xffffff);
+            roadMarkers.add(rightMarker);
+            rightMarker.setData('z', z);
+            rightMarker.setData('side', 'right');
+        }
+
+        function updateMarkerPosition(marker) {
+            const z = marker.getData('z');
+            const side = marker.getData('side');
+            
+            if (z < 0 || z > 600) {
+                marker.setVisible(false);
+                return;
+            }
+            
+            marker.setVisible(true);
+            
+            // Perspective calculation
+            const scale = 200 / (z + 200);
+            const y = 500 - z * 0.7;
+            const roadWidth = 150 * scale;
+            
+            let x = 400 + roadOffset * scale;
+            if (side === 'left') {
+                x -= roadWidth;
+            } else {
+                x += roadWidth;
+            }
+            
+            marker.setPosition(x, y);
+            marker.setScale(scale, scale * 2);
+        }
+
+        function spawnObstacle(scene) {
+            const obstacleGraphics = scene.add.graphics();
+            obstacleGraphics.fillStyle(0xffff00);
+            obstacleGraphics.fillRect(-15, -15, 30, 30);
+            obstacleGraphics.generateTexture('obstacle', 30, 30);
+            obstacleGraphics.destroy();
+
+            const obstacle = scene.add.sprite(0, 0, 'obstacle');
+            obstacles.add(obstacle);
+            
+            const side = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+            const laneOffset = side * Phaser.Math.Between(80, 120);
+            
+            obstacle.setData('z', 600);
+            obstacle.setData('laneOffset', laneOffset);
+        }
+
+        function updateObstaclePosition(obstacle) {
+            const z = obstacle.getData('z');
+            const laneOffset = obstacle.getData('laneOffset');
+            
+            if (z < 0 || z > 600) {
+                obstacle.setVisible(false);
+                return;
+            }
+            
+            obstacle.setVisible(true);
+            
+            // Perspective calculation
+            const scale = 200 / (z + 200);
+            const y = 500 - z * 0.7;
+            const x = 400 + (laneOffset + roadOffset) * scale;
+            
+            obstacle.setPosition(x, y);
+            obstacle.setScale(scale * 2);
+        }
+
+        function endGame(scene) {
+            gameOver = true;
+            speed = 0;
+            
+            const gameOverText = scene.add.text(400, 300, 'CRASHED!\nPress R to Restart', {
+                fontSize: '48px',
+                fill: '#f00',
+                fontFamily: 'monospace',
+                align: 'center'
+            });
+            gameOverText.setOrigin(0.5);
+            gameOverText.setDepth(2000);
+        }
+
+        function restartGame() {
+            if (gameOver) {
+                score = 0;
+                speed = 0;
+                distance = 0;
+                gameOver = false;
+                roadOffset = 0;
+                roadCurve = 0;
+                playerX = 400;
+                lastObstacleZ = 0;
+                game.scene.scenes[0].scene.restart();
+            }
+        }
+
+        function setupTouchControls(scene) {
+            const buttonSize = 70;
+            const buttonAlpha = 0.3;
+            const buttonColor = 0x00ff00;
+
+            // Left button
+            const leftBtn = scene.add.circle(60, 480, buttonSize/2, buttonColor, buttonAlpha);
+            leftBtn.setScrollFactor(0);
+            leftBtn.setDepth(1001);
+            leftBtn.setInteractive();
+            leftBtn.on('pointerdown', () => { cursors.left.isDown = true; });
+            leftBtn.on('pointerup', () => { cursors.left.isDown = false; });
+            leftBtn.on('pointerout', () => { cursors.left.isDown = false; });
+
+            // Right button
+            const rightBtn = scene.add.circle(180, 480, buttonSize/2, buttonColor, buttonAlpha);
+            rightBtn.setScrollFactor(0);
+            rightBtn.setDepth(1001);
+            rightBtn.setInteractive();
+            rightBtn.on('pointerdown', () => { cursors.right.isDown = true; });
+            rightBtn.on('pointerup', () => { cursors.right.isDown = false; });
+            rightBtn.on('pointerout', () => { cursors.right.isDown = false; });
+
+            // Up button (accelerate)
+            const upBtn = scene.add.circle(640, 420, buttonSize/2, buttonColor, buttonAlpha);
+            upBtn.setScrollFactor(0);
+            upBtn.setDepth(1001);
+            upBtn.setInteractive();
+            const upText = scene.add.text(640, 420, 'GAS', {
+                fontSize: '14px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            upText.setOrigin(0.5);
+            upText.setScrollFactor(0);
+            upText.setDepth(1002);
+            
+            upBtn.on('pointerdown', () => { cursors.up.isDown = true; });
+            upBtn.on('pointerup', () => { cursors.up.isDown = false; });
+            upBtn.on('pointerout', () => { cursors.up.isDown = false; });
+
+            // Down button (brake)
+            const downBtn = scene.add.circle(730, 480, buttonSize/2, buttonColor, buttonAlpha);
+            downBtn.setScrollFactor(0);
+            downBtn.setDepth(1001);
+            downBtn.setInteractive();
+            const downText = scene.add.text(730, 480, 'BRK', {
+                fontSize: '14px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            downText.setOrigin(0.5);
+            downText.setScrollFactor(0);
+            downText.setDepth(1002);
+            
+            downBtn.on('pointerdown', () => { cursors.down.isDown = true; });
+            downBtn.on('pointerup', () => { cursors.down.isDown = false; });
+            downBtn.on('pointerout', () => { cursors.down.isDown = false; });
+        }
+    </script>
+</body>
+</html>

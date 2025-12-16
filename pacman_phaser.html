@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man - Phaser Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #game-container {
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        // Game configuration
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#000000',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+
+        const game = new Phaser.Game(config);
+        
+        let player;
+        let cursors;
+        let pellets;
+        let powerPellets;
+        let ghosts;
+        let walls;
+        let score = 0;
+        let lives = 3;
+        let scoreText;
+        let livesText;
+        let gameOver = false;
+        let powerMode = false;
+        let powerModeTimer;
+        let level = 1;
+
+        // Maze layout (1 = wall, 0 = empty, 2 = pellet, 3 = power pellet)
+        const mazeData = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
+            [1,3,1,1,2,1,1,1,2,1,1,2,1,1,1,2,1,1,3,1],
+            [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+            [1,2,1,1,2,1,2,1,1,1,1,1,1,2,1,2,1,1,2,1],
+            [1,2,2,2,2,1,2,2,2,1,1,2,2,2,1,2,2,2,2,1],
+            [1,1,1,1,2,1,1,1,0,1,1,0,1,1,1,2,1,1,1,1],
+            [0,0,0,1,2,1,0,0,0,0,0,0,0,0,1,2,1,0,0,0],
+            [1,1,1,1,2,1,0,1,1,0,0,1,1,0,1,2,1,1,1,1],
+            [0,0,0,0,2,0,0,1,0,0,0,0,1,0,0,2,0,0,0,0],
+            [1,1,1,1,2,1,0,1,1,1,1,1,1,0,1,2,1,1,1,1],
+            [0,0,0,1,2,1,0,0,0,0,0,0,0,0,1,2,1,0,0,0],
+            [1,1,1,1,2,1,0,1,1,1,1,1,1,0,1,2,1,1,1,1],
+            [1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
+            [1,2,1,1,2,1,1,1,2,1,1,2,1,1,1,2,1,1,2,1],
+            [1,3,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,3,1],
+            [1,1,2,1,2,1,2,1,1,1,1,1,1,2,1,2,1,2,1,1],
+            [1,2,2,2,2,1,2,2,2,1,1,2,2,2,1,2,2,2,2,1],
+            [1,2,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,2,1],
+            [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        const TILE_SIZE = 30;
+        const PLAYER_SPEED = 150;
+        const GHOST_SPEED = 100;
+
+        function preload() {
+            // No external assets needed - using graphics
+        }
+
+        function create() {
+            // Create walls group
+            walls = this.physics.add.staticGroup();
+            pellets = this.physics.add.group();
+            powerPellets = this.physics.add.group();
+            ghosts = this.physics.add.group();
+
+            // Build maze
+            for (let row = 0; row < mazeData.length; row++) {
+                for (let col = 0; col < mazeData[row].length; col++) {
+                    const x = col * TILE_SIZE + TILE_SIZE / 2 + 100;
+                    const y = row * TILE_SIZE + TILE_SIZE / 2;
+
+                    if (mazeData[row][col] === 1) {
+                        // Wall
+                        const wall = this.add.rectangle(x, y, TILE_SIZE - 2, TILE_SIZE - 2, 0x0000ff);
+                        walls.add(wall);
+                        wall.body.immovable = true;
+                    } else if (mazeData[row][col] === 2) {
+                        // Pellet
+                        const pellet = this.add.circle(x, y, 3, 0xffb897);
+                        pellets.add(pellet);
+                        pellet.setData('points', 10);
+                    } else if (mazeData[row][col] === 3) {
+                        // Power pellet
+                        const powerPellet = this.add.circle(x, y, 8, 0xffb897);
+                        powerPellets.add(powerPellet);
+                        powerPellet.setData('points', 50);
+                    }
+                }
+            }
+
+            // Create Pac-Man
+            player = this.physics.add.sprite(400, 315, null);
+            const pacmanGraphics = this.add.graphics();
+            pacmanGraphics.fillStyle(0xffff00);
+            pacmanGraphics.fillCircle(0, 0, 12);
+            pacmanGraphics.generateTexture('pacman', 24, 24);
+            pacmanGraphics.destroy();
+            player.setTexture('pacman');
+            player.setCollideWorldBounds(true);
+
+            // Create ghosts
+            const ghostColors = [0xff0000, 0xff00ff, 0x00ffff, 0xffb897];
+            const ghostStartPositions = [
+                { x: 370, y: 285 },
+                { x: 400, y: 285 },
+                { x: 430, y: 285 },
+                { x: 460, y: 285 }
+            ];
+
+            for (let i = 0; i < 4; i++) {
+                const ghostGraphics = this.add.graphics();
+                ghostGraphics.fillStyle(ghostColors[i]);
+                ghostGraphics.fillCircle(0, 0, 12);
+                ghostGraphics.generateTexture('ghost' + i, 24, 24);
+                ghostGraphics.destroy();
+
+                const ghost = this.physics.add.sprite(
+                    ghostStartPositions[i].x,
+                    ghostStartPositions[i].y,
+                    'ghost' + i
+                );
+                ghosts.add(ghost);
+                ghost.setData('direction', Phaser.Math.Between(0, 3));
+                ghost.setData('normalColor', ghostColors[i]);
+            }
+
+            // Setup collisions
+            this.physics.add.collider(player, walls);
+            this.physics.add.collider(ghosts, walls);
+            this.physics.add.overlap(player, pellets, collectPellet, null, this);
+            this.physics.add.overlap(player, powerPellets, collectPowerPellet, null, this);
+            this.physics.add.overlap(player, ghosts, hitGhost, null, this);
+
+            // Setup controls
+            cursors = this.input.keyboard.createCursorKeys();
+            this.input.keyboard.on('keydown-R', restartGame, this);
+
+            // Setup touch controls for mobile
+            if (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) {
+                setupTouchControls(this);
+            }
+
+            // UI Text
+            scoreText = this.add.text(16, 16, 'SCORE: 0', {
+                fontSize: '20px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            livesText = this.add.text(16, 40, 'LIVES: 3', {
+                fontSize: '20px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+
+            const controlsText = this.add.text(16, 570, 'Arrows: Move | R: Restart', {
+                fontSize: '14px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Player movement
+            if (cursors.left.isDown) {
+                player.setVelocityX(-PLAYER_SPEED);
+                player.setVelocityY(0);
+            } else if (cursors.right.isDown) {
+                player.setVelocityX(PLAYER_SPEED);
+                player.setVelocityY(0);
+            } else if (cursors.up.isDown) {
+                player.setVelocityY(-PLAYER_SPEED);
+                player.setVelocityX(0);
+            } else if (cursors.down.isDown) {
+                player.setVelocityY(PLAYER_SPEED);
+                player.setVelocityX(0);
+            }
+
+            // Ghost AI
+            ghosts.children.entries.forEach(ghost => {
+                updateGhostMovement(ghost);
+            });
+
+            // Check win condition
+            if (pellets.countActive() === 0 && powerPellets.countActive() === 0 && !gameOver) {
+                level++;
+                this.scene.restart();
+            }
+        }
+
+        function updateGhostMovement(ghost) {
+            const speed = powerMode ? GHOST_SPEED * 0.7 : GHOST_SPEED;
+            
+            // Simple AI: move towards player with some randomness
+            if (Phaser.Math.Between(0, 100) < 98) {
+                const dx = player.x - ghost.x;
+                const dy = player.y - ghost.y;
+                
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    ghost.setVelocityX(dx > 0 ? speed : -speed);
+                    ghost.setVelocityY(0);
+                } else {
+                    ghost.setVelocityY(dy > 0 ? speed : -speed);
+                    ghost.setVelocityX(0);
+                }
+            }
+        }
+
+        function collectPellet(player, pellet) {
+            pellet.destroy();
+            score += pellet.getData('points');
+            scoreText.setText('SCORE: ' + score);
+        }
+
+        function collectPowerPellet(player, pellet) {
+            pellet.destroy();
+            score += pellet.getData('points');
+            scoreText.setText('SCORE: ' + score);
+            
+            // Activate power mode
+            powerMode = true;
+            ghosts.children.entries.forEach(ghost => {
+                ghost.setTint(0x0000ff);
+            });
+
+            // Clear existing timer
+            if (powerModeTimer) {
+                clearTimeout(powerModeTimer);
+            }
+
+            // Set timer to end power mode
+            powerModeTimer = setTimeout(() => {
+                powerMode = false;
+                ghosts.children.entries.forEach(ghost => {
+                    ghost.clearTint();
+                });
+            }, 7000);
+        }
+
+        function hitGhost(player, ghost) {
+            if (powerMode) {
+                // Eat ghost
+                ghost.setPosition(400, 285);
+                score += 200;
+                scoreText.setText('SCORE: ' + score);
+            } else {
+                // Lose life
+                lives--;
+                livesText.setText('LIVES: ' + lives);
+                
+                if (lives <= 0) {
+                    gameOver = true;
+                    const gameOverText = game.scene.scenes[0].add.text(400, 300, 'GAME OVER\nPress R to Restart', {
+                        fontSize: '32px',
+                        fill: '#f00',
+                        fontFamily: 'monospace',
+                        align: 'center'
+                    });
+                    gameOverText.setOrigin(0.5);
+                    player.setVelocity(0, 0);
+                    ghosts.children.entries.forEach(g => g.setVelocity(0, 0));
+                } else {
+                    // Reset positions
+                    player.setPosition(400, 315);
+                    const ghostStartPositions = [
+                        { x: 370, y: 285 },
+                        { x: 400, y: 285 },
+                        { x: 430, y: 285 },
+                        { x: 460, y: 285 }
+                    ];
+                    ghosts.children.entries.forEach((g, i) => {
+                        g.setPosition(ghostStartPositions[i].x, ghostStartPositions[i].y);
+                    });
+                }
+            }
+        }
+
+        function restartGame() {
+            if (gameOver) {
+                score = 0;
+                lives = 3;
+                level = 1;
+                gameOver = false;
+                powerMode = false;
+                game.scene.scenes[0].scene.restart();
+            }
+        }
+
+        function setupTouchControls(scene) {
+            const buttonSize = 70;
+            const buttonAlpha = 0.3;
+            const buttonColor = 0x00ff00;
+
+            // Left button
+            const leftBtn = scene.add.circle(60, 530, buttonSize/2, buttonColor, buttonAlpha);
+            leftBtn.setInteractive();
+            leftBtn.on('pointerdown', () => { cursors.left.isDown = true; });
+            leftBtn.on('pointerup', () => { cursors.left.isDown = false; });
+            leftBtn.on('pointerout', () => { cursors.left.isDown = false; });
+
+            // Right button
+            const rightBtn = scene.add.circle(200, 530, buttonSize/2, buttonColor, buttonAlpha);
+            rightBtn.setInteractive();
+            rightBtn.on('pointerdown', () => { cursors.right.isDown = true; });
+            rightBtn.on('pointerup', () => { cursors.right.isDown = false; });
+            rightBtn.on('pointerout', () => { cursors.right.isDown = false; });
+
+            // Up button
+            const upBtn = scene.add.circle(130, 470, buttonSize/2, buttonColor, buttonAlpha);
+            upBtn.setInteractive();
+            upBtn.on('pointerdown', () => { cursors.up.isDown = true; });
+            upBtn.on('pointerup', () => { cursors.up.isDown = false; });
+            upBtn.on('pointerout', () => { cursors.up.isDown = false; });
+
+            // Down button
+            const downBtn = scene.add.circle(130, 560, buttonSize/2, buttonColor, buttonAlpha);
+            downBtn.setInteractive();
+            downBtn.on('pointerdown', () => { cursors.down.isDown = true; });
+            downBtn.on('pointerup', () => { cursors.down.isDown = false; });
+            downBtn.on('pointerout', () => { cursors.down.isDown = false; });
+
+            // Restart button
+            const restartBtn = scene.add.circle(700, 530, buttonSize/2, buttonColor, buttonAlpha);
+            restartBtn.setInteractive();
+            const restartText = scene.add.text(700, 530, 'R', {
+                fontSize: '24px',
+                fill: '#0f0',
+                fontFamily: 'monospace'
+            });
+            restartText.setOrigin(0.5);
+            restartBtn.on('pointerdown', () => restartGame());
+        }
+    </script>
+</body>
+</html>

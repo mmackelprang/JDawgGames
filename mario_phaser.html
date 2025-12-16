@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Bros - Phaser Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #game-container {
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#5c94fc',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 1000 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+
+        const game = new Phaser.Game(config);
+        
+        let player;
+        let cursors;
+        let platforms;
+        let bricks;
+        let questionBlocks;
+        let enemies;
+        let coins;
+        let pipes;
+        let score = 0;
+        let lives = 3;
+        let scoreText;
+        let livesText;
+        let gameOver = false;
+        let isRunning = false;
+        let runKey;
+        let jumpKey;
+
+        function preload() {
+            // No external assets needed - using graphics
+        }
+
+        function create() {
+            // Create platforms
+            platforms = this.physics.add.staticGroup();
+            
+            // Ground
+            for (let i = 0; i < 10; i++) {
+                const ground = this.add.rectangle(i * 80 + 40, 580, 80, 40, 0x8b4513);
+                platforms.add(ground);
+                ground.body.immovable = true;
+            }
+
+            // Create bricks
+            bricks = this.physics.add.staticGroup();
+            const brickPositions = [
+                {x: 300, y: 300}, {x: 340, y: 300}, {x: 380, y: 300},
+                {x: 500, y: 300}, {x: 540, y: 300},
+                {x: 300, y: 400}, {x: 380, y: 400}, {x: 500, y: 400}
+            ];
+            brickPositions.forEach(pos => {
+                const brick = this.add.rectangle(pos.x, pos.y, 38, 38, 0xff6600);
+                bricks.add(brick);
+                brick.body.immovable = true;
+                brick.setData('type', 'brick');
+            });
+
+            // Create question blocks
+            questionBlocks = this.physics.add.staticGroup();
+            const blockPositions = [{x: 340, y: 200}, {x: 460, y: 200}, {x: 580, y: 200}];
+            blockPositions.forEach(pos => {
+                const block = this.add.rectangle(pos.x, pos.y, 38, 38, 0xffff00);
+                questionBlocks.add(block);
+                block.body.immovable = true;
+                block.setData('hit', false);
+            });
+
+            // Create pipes
+            pipes = this.physics.add.staticGroup();
+            const pipeData = [{x: 600, y: 520, height: 80}];
+            pipeData.forEach(data => {
+                const pipe = this.add.rectangle(data.x, data.y, 60, data.height, 0x00ff00);
+                pipes.add(pipe);
+                pipe.body.immovable = true;
+            });
+
+            // Create player (Mario)
+            player = this.physics.add.sprite(100, 450, null);
+            const playerGraphics = this.add.graphics();
+            playerGraphics.fillStyle(0xff0000);
+            playerGraphics.fillRect(-10, -15, 20, 15);
+            playerGraphics.fillStyle(0xffcc99);
+            playerGraphics.fillCircle(0, -20, 8);
+            playerGraphics.fillStyle(0x0000ff);
+            playerGraphics.fillRect(-12, 0, 24, 15);
+            playerGraphics.generateTexture('player', 30, 40);
+            playerGraphics.destroy();
+            player.setTexture('player');
+            player.setBounce(0.1);
+            player.setCollideWorldBounds(true);
+
+            // Create enemy group
+            enemies = this.physics.add.group();
+            spawnEnemy(this, 400, 500);
+            spawnEnemy(this, 600, 450);
+
+            // Create coins group
+            coins = this.physics.add.group();
+
+            // Setup collisions
+            this.physics.add.collider(player, platforms);
+            this.physics.add.collider(player, bricks);
+            this.physics.add.collider(player, pipes);
+            this.physics.add.collider(player, questionBlocks, hitBlock, null, this);
+            this.physics.add.collider(enemies, platforms);
+            this.physics.add.collider(enemies, bricks);
+            this.physics.add.collider(enemies, pipes);
+            this.physics.add.overlap(player, coins, collectCoin, null, this);
+            this.physics.add.overlap(player, enemies, hitEnemy, null, this);
+
+            // Setup controls
+            cursors = this.input.keyboard.createCursorKeys();
+            jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+            runKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+            this.input.keyboard.on('keydown-R', restartGame, this);
+
+            // Setup touch controls for mobile
+            if (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) {
+                setupTouchControls(this);
+            }
+
+            // UI Text
+            scoreText = this.add.text(16, 16, 'SCORE: 0', {
+                fontSize: '24px',
+                fill: '#fff',
+                fontFamily: 'monospace'
+            });
+
+            livesText = this.add.text(16, 44, 'LIVES: 3', {
+                fontSize: '24px',
+                fill: '#fff',
+                fontFamily: 'monospace'
+            });
+
+            this.add.text(16, 570, 'Arrows: Move | W/Up: Jump | Shift: Run | R: Restart', {
+                fontSize: '12px',
+                fill: '#fff',
+                fontFamily: 'monospace'
+            });
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Player movement
+            isRunning = runKey.isDown;
+            const speed = isRunning ? 250 : 150;
+
+            if (cursors.left.isDown) {
+                player.setVelocityX(-speed);
+            } else if (cursors.right.isDown) {
+                player.setVelocityX(speed);
+            } else {
+                player.setVelocityX(0);
+            }
+
+            // Player jump
+            if ((cursors.up.isDown || jumpKey.isDown) && player.body.touching.down) {
+                player.setVelocityY(-550);
+            }
+
+            // Enemy movement
+            enemies.children.entries.forEach(enemy => {
+                if (!enemy.body) return;
+                
+                // Simple patrol behavior
+                if (enemy.body.velocity.x === 0) {
+                    enemy.setVelocityX(-80);
+                }
+                
+                // Turn around at edges
+                if (enemy.body.blocked.left) {
+                    enemy.setVelocityX(80);
+                } else if (enemy.body.blocked.right) {
+                    enemy.setVelocityX(-80);
+                }
+            });
+        }
+
+        function spawnEnemy(scene, x, y) {
+            const enemyGraphics = scene.add.graphics();
+            enemyGraphics.fillStyle(0x8b4513);
+            enemyGraphics.fillRect(-12, -8, 24, 16);
+            enemyGraphics.fillStyle(0xffffff);
+            enemyGraphics.fillCircle(-5, -3, 3);
+            enemyGraphics.fillCircle(5, -3, 3);
+            enemyGraphics.generateTexture('enemy', 30, 20);
+            enemyGraphics.destroy();
+
+            const enemy = scene.physics.add.sprite(x, y, 'enemy');
+            enemies.add(enemy);
+            enemy.setBounce(0.1);
+            enemy.setCollideWorldBounds(true);
+            enemy.setVelocityX(-80);
+        }
+
+        function hitBlock(player, block) {
+            // Only trigger if player hits from below
+            if (player.body.velocity.y < 0 && player.y > block.y) {
+                if (!block.getData('hit')) {
+                    block.setData('hit', true);
+                    block.setFillStyle(0x996600);
+                    
+                    // Spawn coin
+                    const coin = this.add.circle(block.x, block.y - 40, 10, 0xffff00);
+                    coins.add(coin);
+                    this.physics.add.existing(coin);
+                    coin.body.setVelocity(0, -200);
+                    coin.body.setGravityY(800);
+                    
+                    score += 100;
+                    scoreText.setText('SCORE: ' + score);
+                }
+            }
+        }
+
+        function collectCoin(player, coin) {
+            coin.destroy();
+            score += 50;
+            scoreText.setText('SCORE: ' + score);
+        }
+
+        function hitEnemy(player, enemy) {
+            // Check if player is jumping on enemy
+            if (player.body.velocity.y > 0 && player.y < enemy.y - 10) {
+                enemy.destroy();
+                player.setVelocityY(-300);
+                score += 200;
+                scoreText.setText('SCORE: ' + score);
+            } else {
+                // Player hit by enemy
+                lives--;
+                livesText.setText('LIVES: ' + lives);
+                
+                player.setTint(0xff0000);
+                player.setPosition(100, 450);
+                this.time.delayedCall(1000, () => {
+                    player.clearTint();
+                });
+
+                if (lives <= 0) {
+                    gameOver = true;
+                    player.setVelocity(0, 0);
+                    enemies.children.entries.forEach(e => e.setVelocity(0, 0));
+                    
+                    const gameOverText = this.add.text(400, 300, 'GAME OVER\nPress R to Restart', {
+                        fontSize: '48px',
+                        fill: '#fff',
+                        fontFamily: 'monospace',
+                        align: 'center'
+                    });
+                    gameOverText.setOrigin(0.5);
+                }
+            }
+        }
+
+        function restartGame() {
+            if (gameOver) {
+                score = 0;
+                lives = 3;
+                gameOver = false;
+                game.scene.scenes[0].scene.restart();
+            }
+        }
+
+        function setupTouchControls(scene) {
+            const buttonSize = 70;
+            const buttonAlpha = 0.3;
+            const buttonColor = 0x00ff00;
+
+            // Left button
+            const leftBtn = scene.add.circle(60, 520, buttonSize/2, buttonColor, buttonAlpha);
+            leftBtn.setScrollFactor(0);
+            leftBtn.setInteractive();
+            leftBtn.on('pointerdown', () => { cursors.left.isDown = true; });
+            leftBtn.on('pointerup', () => { cursors.left.isDown = false; });
+            leftBtn.on('pointerout', () => { cursors.left.isDown = false; });
+
+            // Right button
+            const rightBtn = scene.add.circle(170, 520, buttonSize/2, buttonColor, buttonAlpha);
+            rightBtn.setScrollFactor(0);
+            rightBtn.setInteractive();
+            rightBtn.on('pointerdown', () => { cursors.right.isDown = true; });
+            rightBtn.on('pointerup', () => { cursors.right.isDown = false; });
+            rightBtn.on('pointerout', () => { cursors.right.isDown = false; });
+
+            // Jump button
+            const jumpBtn = scene.add.circle(640, 520, buttonSize/2, buttonColor, buttonAlpha);
+            jumpBtn.setScrollFactor(0);
+            jumpBtn.setInteractive();
+            const jumpText = scene.add.text(640, 520, 'JUMP', {
+                fontSize: '14px',
+                fill: '#fff',
+                fontFamily: 'monospace'
+            });
+            jumpText.setOrigin(0.5);
+            jumpText.setScrollFactor(0);
+            
+            jumpBtn.on('pointerdown', () => {
+                if (player.body.touching.down) {
+                    player.setVelocityY(-550);
+                }
+            });
+
+            // Run button
+            const runBtn = scene.add.circle(730, 520, buttonSize/2, buttonColor, buttonAlpha);
+            runBtn.setScrollFactor(0);
+            runBtn.setInteractive();
+            const runText = scene.add.text(730, 520, 'RUN', {
+                fontSize: '14px',
+                fill: '#fff',
+                fontFamily: 'monospace'
+            });
+            runText.setOrigin(0.5);
+            runText.setScrollFactor(0);
+            
+            runBtn.on('pointerdown', () => { runKey.isDown = true; });
+            runBtn.on('pointerup', () => { runKey.isDown = false; });
+            runBtn.on('pointerout', () => { runKey.isDown = false; });
+        }
+    </script>
+</body>
+</html>
