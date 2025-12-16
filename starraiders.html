@@ -159,7 +159,6 @@
         let waveNumber = 1;
         let enemiesInWave = 5;
         let enemiesDestroyed = 0;
-        let lastTime = 0;
         let lastEnergyDrain = 0;
         
         // Touch controls
@@ -212,9 +211,6 @@
         }
 
         function gameLoop(timestamp) {
-            const deltaTime = timestamp - lastTime;
-            lastTime = timestamp;
-
             if (!gameOver) {
                 update(timestamp);
             }
@@ -244,9 +240,9 @@
             player.y = Math.max(20, Math.min(580, player.y));
 
             // Firing
-            if ((keys.space || touchFire) && time > lastFired) {
+            if ((keys.space || touchFire) && time - lastFired > fireRate) {
                 fireBullet();
-                lastFired = time + fireRate;
+                lastFired = time;
             }
 
             // Update bullets
