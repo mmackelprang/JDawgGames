@@ -2,12 +2,15 @@ import Phaser from 'phaser';
 import { ASSETS, SCREEN_WIDTH, SCREEN_HEIGHT, EXIT_TIMER_TITLE } from '../constants';
 import { gameState } from '../state/GameState';
 import { GamePhase } from '../types';
+import { TouchControls } from '../input/TouchControls';
 
 export class TitleScene extends Phaser.Scene {
   private exitTimer: number = EXIT_TIMER_TITLE;
   private blinkTimer: number = 0;
   private startText!: Phaser.GameObjects.Text;
   private showText: boolean = true;
+  private touchControls!: TouchControls;
+  private previousLaunchPressed: boolean = false;
 
   constructor() {
     super({ key: 'TitleScene' });
@@ -17,6 +20,9 @@ export class TitleScene extends Phaser.Scene {
     // Reset game state
     gameState.phase = GamePhase.TITLE;
     this.exitTimer = EXIT_TIMER_TITLE;
+
+    // Get touch controls instance
+    this.touchControls = TouchControls.getInstance();
 
     // Display title image centered
     const title = this.add.image(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 50, ASSETS.TITLE);
@@ -31,7 +37,7 @@ export class TitleScene extends Phaser.Scene {
     this.startText.setOrigin(0.5, 0.5);
 
     // Add credits/info text
-    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 50, 'Mouse or Arrow Keys to move | Click or SPACE to launch', {
+    this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 50, 'Mouse/Arrow Keys/Touch to move | Click/SPACE/Touch to launch', {
       fontSize: '14px',
       color: '#888888',
       fontFamily: 'monospace'
@@ -59,6 +65,13 @@ export class TitleScene extends Phaser.Scene {
       // For web, we just reset the timer
       this.exitTimer = EXIT_TIMER_TITLE;
     }
+
+    // Check for touch launch button press
+    const currentLaunchPressed = this.touchControls.isLaunchPressed();
+    if (currentLaunchPressed && !this.previousLaunchPressed) {
+      this.startGame();
+    }
+    this.previousLaunchPressed = currentLaunchPressed;
 
     // Blink the start text
     this.blinkTimer += deltaSeconds;

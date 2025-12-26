@@ -7,6 +7,7 @@ import {
 import { gameState } from '../state/GameState';
 import { BlockKind, PowerUpKind, BallData, BlockData, PowerUpDropData, GamePhase } from '../types';
 import { spawnLevel } from '../systems/LevelSystem';
+import { TouchControls } from '../input/TouchControls';
 
 export class GameScene extends Phaser.Scene {
   private paddle!: Phaser.GameObjects.Sprite;
@@ -14,6 +15,8 @@ export class GameScene extends Phaser.Scene {
   private launchKey!: Phaser.Input.Keyboard.Key;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private escapeKey!: Phaser.Input.Keyboard.Key;
+  private touchControls!: TouchControls;
+  private previousLaunchPressed: boolean = false;
 
   // UI elements
   private scoreText!: Phaser.GameObjects.Text;
@@ -27,6 +30,9 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     gameState.phase = GamePhase.PLAYING;
+
+    // Get touch controls instance
+    this.touchControls = TouchControls.getInstance();
 
     // Draw visible borders
     this.createBorders();
@@ -287,6 +293,14 @@ export class GameScene extends Phaser.Scene {
       gameState.paddleX += PADDLE_SPEED * deltaSeconds;
     }
 
+    // Touch paddle movement
+    if (this.touchControls.isLeftPressed()) {
+      gameState.paddleX -= PADDLE_SPEED * deltaSeconds;
+    }
+    if (this.touchControls.isRightPressed()) {
+      gameState.paddleX += PADDLE_SPEED * deltaSeconds;
+    }
+
     // Clamp paddle position
     const halfPaddle = PADDLE_WIDTH / 2;
     gameState.paddleX = Phaser.Math.Clamp(
@@ -303,6 +317,13 @@ export class GameScene extends Phaser.Scene {
         gameState.ballIsHeld) {
       this.launchBall();
     }
+
+    // Touch launch with debouncing
+    const currentLaunchPressed = this.touchControls.isLaunchPressed();
+    if (currentLaunchPressed && !this.previousLaunchPressed && gameState.ballIsHeld) {
+      this.launchBall();
+    }
+    this.previousLaunchPressed = currentLaunchPressed;
 
     // Update held ball position
     if (gameState.ballIsHeld && gameState.balls.length > 0) {

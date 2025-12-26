@@ -19,9 +19,15 @@ DXBall is a classic brick-breaker game inspired by the iconic Breakout and Arkan
 
 ## Controls
 
+### Desktop
 - **Arrow Keys / Mouse**: Move the paddle left and right
 - **Z Key / Space / Click**: Launch the ball
 - **ESC**: Pause/unpause the game
+
+### Mobile/Touch
+- **Touch Controls**: On-screen buttons automatically appear on touch devices
+  - **Left/Right Buttons**: Move the paddle left and right
+  - **LAUNCH Button**: Launch the ball
 
 ## Gameplay
 

@@ -31,11 +31,68 @@
         image-rendering: pixelated;
         image-rendering: crisp-edges;
       }
+
+      #touchControls {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 200px;
+        pointer-events: none;
+      }
+
+      .touch-btn {
+        position: absolute;
+        background: rgba(0, 255, 0, 0.2);
+        border: 2px solid rgba(0, 255, 0, 0.5);
+        border-radius: 10px;
+        color: #0f0;
+        font-size: 20px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+      }
+
+      .touch-btn:active {
+        background: rgba(0, 255, 0, 0.4);
+      }
+
+      #leftBtn {
+        left: 10px;
+        bottom: 10px;
+        width: 80px;
+        height: 80px;
+      }
+
+      #rightBtn {
+        left: 100px;
+        bottom: 10px;
+        width: 80px;
+        height: 80px;
+      }
+
+      #launchBtn {
+        right: 10px;
+        bottom: 10px;
+        width: 100px;
+        height: 80px;
+      }
     </style>
-    <script type="module" crossorigin src="./assets/index-oaDWZuwa.js"></script>
+    <script type="module" crossorigin src="./assets/index-B_SLX-pq.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/phaser-0RJB29YE.js">
   </head>
   <body>
-    <div id="game-container"></div>
+    <div id="game-container"></div>
+    <div id="touchControls">
+      <div class="touch-btn" id="leftBtn" role="button" aria-label="Move paddle left" tabindex="0">◄</div>
+      <div class="touch-btn" id="rightBtn" role="button" aria-label="Move paddle right" tabindex="0">►</div>
+      <div class="touch-btn" id="launchBtn" role="button" aria-label="Launch ball" tabindex="0">LAUNCH</div>
+    </div>
   </body>
 </html>
