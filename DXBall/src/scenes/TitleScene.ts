@@ -21,8 +21,8 @@ export class TitleScene extends Phaser.Scene {
     gameState.phase = GamePhase.TITLE;
     this.exitTimer = EXIT_TIMER_TITLE;
 
-    // Initialize touch controls
-    this.touchControls = new TouchControls();
+    // Get touch controls instance
+    this.touchControls = TouchControls.getInstance();
 
     // Display title image centered
     const title = this.add.image(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 50, ASSETS.TITLE);

@@ -1,6 +1,7 @@
 /**
  * TouchControls
  * Manages touch input controls for mobile devices
+ * Singleton pattern to ensure only one instance exists
  */
 
 export interface TouchState {
@@ -10,6 +11,8 @@ export interface TouchState {
 }
 
 export class TouchControls {
+  private static instance: TouchControls | null = null;
+
   private touchState: TouchState = {
     left: false,
     right: false,
@@ -21,8 +24,15 @@ export class TouchControls {
   private launchBtn: HTMLElement | null = null;
   private touchControlsDiv: HTMLElement | null = null;
 
-  constructor() {
+  private constructor() {
     this.initialize();
+  }
+
+  public static getInstance(): TouchControls {
+    if (!TouchControls.instance) {
+      TouchControls.instance = new TouchControls();
+    }
+    return TouchControls.instance;
   }
 
   private initialize(): void {

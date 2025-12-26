@@ -31,8 +31,8 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     gameState.phase = GamePhase.PLAYING;
 
-    // Initialize touch controls
-    this.touchControls = new TouchControls();
+    // Get touch controls instance
+    this.touchControls = TouchControls.getInstance();
 
     // Draw visible borders
     this.createBorders();
