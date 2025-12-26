@@ -88,10 +88,6 @@ export class TouchControls {
     }
   }
 
-  public getState(): TouchState {
-    return this.touchState;
-  }
-
   public isLeftPressed(): boolean {
     return this.touchState.left;
   }
@@ -102,15 +98,5 @@ export class TouchControls {
 
   public isLaunchPressed(): boolean {
     return this.touchState.launch;
-  }
-
-  public wasLaunchJustPressed(): boolean {
-    // For detecting single press events, we need to track previous state
-    // This is a simplified version - the scene will handle the debouncing
-    return this.touchState.launch;
-  }
-
-  public resetLaunch(): void {
-    this.touchState.launch = false;
   }
 }
