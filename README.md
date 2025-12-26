@@ -13,6 +13,12 @@ Welcome to JDawg Games! This is a collection of classic arcade games recreated i
 
 ## 🚀 Advanced Games
 
+### 🧱 DXBall
+A faithful recreation of the classic brick-breaker arcade game! Break all the bricks with your paddle and ball, collect power-ups like multi-ball and score multipliers, and complete 4 challenging levels!
+- **Play:** [DXBall](DXBall/dist/index.html)
+- **Controls:** Arrow keys/Mouse to move paddle, Z/Space/Click to launch ball, ESC to pause
+- **Features:** 4 progressive levels, power-up system (multi-ball, multipliers), high score persistence, retro arcade aesthetic
+
 ### 🚀 Star Raiders
 A mobile-friendly clone of the classic Atari 800 space combat game! Defend sectors from enemy ships, manage your energy and shields, and use the tactical radar to track threats.
 - **Play:** [starraiders.html](starraiders.html)
