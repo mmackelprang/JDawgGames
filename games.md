@@ -6,6 +6,12 @@ This file lists all available games in the JDawg Games collection. To add a new 
 
 ## Advanced Games
 
+### DXBall
+- **File:** `DXBall/dist/index.html`
+- **Description:** A faithful recreation of the classic brick-breaker arcade game! Break all the bricks with your paddle and ball, collect power-ups like multi-ball and score multipliers, and complete 4 challenging levels!
+- **Controls:** Arrow keys/Mouse to move paddle, Z/Space/Click to launch ball, ESC to pause
+- **Play:** [DXBall](DXBall/dist/index.html)
+
 ### Star Raiders
 - **File:** `starraiders.html`
 - **Description:** A mobile-friendly clone of the classic Atari 800 space combat game! Defend sectors from enemy ships, manage your energy and shields, and use the tactical radar to track threats.
