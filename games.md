@@ -92,6 +92,12 @@ This file lists all available games in the JDawg Games collection. To add a new 
 - **Controls:** Mouse/Touch to aim and click/tap to fire, R to restart
 - **Play:** [Missile Command](missilecommand.html)
 
+### Snake
+- **File:** `snake.html`
+- **Description:** Guide the growing snake to eat food and rack up points! Don't crash into the walls or your own tail. Speed increases as you level up.
+- **Controls:** Arrow keys or WASD to steer, R to restart (touch controls / swipe available on mobile)
+- **Play:** [Snake](snake.html)
+
 ### Tetris
 - **File:** `tetris.html`
 - **Description:** The classic block-stacking puzzle game! Rotate and position falling Tetriminos to create complete lines and clear them. The speed increases as you level up!

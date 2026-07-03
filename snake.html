@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 8px #0f0;
+        }
+        canvas {
+            border: 2px solid #0f0;
+            background: #111;
+            touch-action: none;
+            max-width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+        }
+        #info {
+            font-size: 20px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        #instructions {
+            font-size: 14px;
+            margin: 8px 0 12px 0;
+            opacity: 0.8;
+            text-align: center;
+            max-width: 420px;
+        }
+        #gameOver {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            color: #f00;
+            display: none;
+            text-align: center;
+            background: rgba(0,0,0,0.85);
+            padding: 24px 40px;
+            border: 2px solid #f00;
+            border-radius: 12px;
+            text-shadow: 0 0 8px #f00;
+        }
+        #gameOver .sub {
+            font-size: 18px;
+            color: #0f0;
+            margin-top: 12px;
+            text-shadow: none;
+        }
+        #touchControls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 220px;
+            pointer-events: none;
+        }
+        .touch-btn {
+            position: absolute;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 10px;
+            color: #0f0;
+            font-size: 28px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(0, 255, 0, 0.4);
+        }
+        #upBtn    { left: 90px;  bottom: 150px; width: 70px; height: 60px; }
+        #leftBtn  { left: 10px;  bottom: 80px;  width: 70px; height: 60px; }
+        #rightBtn { left: 170px; bottom: 80px;  width: 70px; height: 60px; }
+        #downBtn  { left: 90px;  bottom: 10px;  width: 70px; height: 60px; }
+        #restartBtn {
+            right: 20px;
+            bottom: 80px;
+            width: 90px;
+            height: 60px;
+            font-size: 18px;
+        }
+        #backLink {
+            margin-top: 14px;
+            color: #0f0;
+            font-size: 14px;
+            text-decoration: none;
+            border: 1px solid #0f0;
+            padding: 6px 14px;
+            border-radius: 6px;
+        }
+        #backLink:hover { background: rgba(0,255,0,0.15); }
+        @media (max-width: 700px) {
+            #touchControls { display: block; }
+            body { padding: 10px; }
+            h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>SNAKE</h1>
+    <div id="info">Score: <span id="score">0</span> &nbsp; High: <span id="high">0</span> &nbsp; Level: <span id="level">1</span></div>
+    <canvas id="game" width="400" height="400"></canvas>
+    <div id="instructions">Arrow keys or WASD to steer. Eat the red food to grow. Don't hit walls or yourself. Press R to restart.</div>
+    <a id="backLink" href="index.html">&larr; Back to Games</a>
+
+    <div id="gameOver">
+        GAME OVER
+        <div class="sub">Press R or tap RESTART</div>
+    </div>
+
+    <div id="touchControls">
+        <div id="upBtn" class="touch-btn">&uarr;</div>
+        <div id="leftBtn" class="touch-btn">&larr;</div>
+        <div id="rightBtn" class="touch-btn">&rarr;</div>
+        <div id="downBtn" class="touch-btn">&darr;</div>
+        <div id="restartBtn" class="touch-btn">RESTART</div>
+    </div>
+
+    <script>
+    (function () {
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highEl = document.getElementById('high');
+        const levelEl = document.getElementById('level');
+        const gameOverEl = document.getElementById('gameOver');
+
+        const COLS = 20;
+        const ROWS = 20;
+        const CELL = canvas.width / COLS;
+
+        const BASE_SPEED_MS = 140;
+        const MIN_SPEED_MS = 55;
+        const SPEED_STEP_MS = 8;
+
+        let snake, dir, nextDir, food, score, level, alive, tickMs, lastTick;
+        let high = 0;
+        try { high = parseInt(localStorage.getItem('snakeHigh') || '0', 10) || 0; } catch (_) {}
+        highEl.textContent = high;
+
+        function reset() {
+            snake = [{x: 10, y: 10}, {x: 9, y: 10}, {x: 8, y: 10}];
+            dir = {x: 1, y: 0};
+            nextDir = {x: 1, y: 0};
+            score = 0;
+            level = 1;
+            tickMs = BASE_SPEED_MS;
+            placeFood();
+            alive = true;
+            scoreEl.textContent = score;
+            levelEl.textContent = level;
+            gameOverEl.firstChild.textContent = 'GAME OVER';
+            gameOverEl.style.color = '#f00';
+            gameOverEl.style.borderColor = '#f00';
+            gameOverEl.style.textShadow = '0 0 8px #f00';
+            gameOverEl.style.display = 'none';
+            lastTick = performance.now();
+        }
+
+        function placeFood() {
+            const occupied = new Set(snake.map(s => s.y * COLS + s.x));
+            const free = [];
+            for (let i = 0; i < COLS * ROWS; i++) {
+                if (!occupied.has(i)) free.push(i);
+            }
+            if (!free.length) {
+                food = null;
+                return;
+            }
+            const pick = free[Math.floor(Math.random() * free.length)];
+            food = {x: pick % COLS, y: Math.floor(pick / COLS)};
+        }
+
+        function setDir(x, y) {
+            if (nextDir.x === -x && nextDir.y === -y) return;
+            nextDir = {x, y};
+        }
+
+        function step() {
+            dir = nextDir;
+            const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+            if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+                return die();
+            }
+            const willEat = food && head.x === food.x && head.y === food.y;
+            const checkLen = willEat ? snake.length : snake.length - 1;
+            for (let i = 0; i < checkLen; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    return die();
+                }
+            }
+
+            snake.unshift(head);
+            if (willEat) {
+                score += 10;
+                scoreEl.textContent = score;
+                const newLevel = Math.floor(score / 50) + 1;
+                if (newLevel > level) {
+                    level = newLevel;
+                    levelEl.textContent = level;
+                    tickMs = Math.max(MIN_SPEED_MS, BASE_SPEED_MS - (level - 1) * SPEED_STEP_MS);
+                }
+                placeFood();
+                if (!food) return win();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function die() {
+            alive = false;
+            if (score > high) {
+                high = score;
+                highEl.textContent = high;
+                try { localStorage.setItem('snakeHigh', String(high)); } catch (_) {}
+            }
+            gameOverEl.style.display = 'block';
+        }
+
+        function win() {
+            alive = false;
+            if (score > high) {
+                high = score;
+                highEl.textContent = high;
+                try { localStorage.setItem('snakeHigh', String(high)); } catch (_) {}
+            }
+            gameOverEl.firstChild.textContent = 'YOU WIN!';
+            gameOverEl.style.color = '#0f0';
+            gameOverEl.style.borderColor = '#0f0';
+            gameOverEl.style.textShadow = '0 0 8px #0f0';
+            gameOverEl.style.display = 'block';
+        }
+
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(0,255,0,0.08)';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL, 0);
+                ctx.lineTo(i * CELL, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL);
+                ctx.lineTo(canvas.width, i * CELL);
+                ctx.stroke();
+            }
+
+            if (food) {
+                ctx.fillStyle = '#f33';
+                ctx.shadowColor = '#f00';
+                ctx.shadowBlur = 12;
+                ctx.fillRect(food.x * CELL + 2, food.y * CELL + 2, CELL - 4, CELL - 4);
+                ctx.shadowBlur = 0;
+            }
+
+            for (let i = snake.length - 1; i >= 0; i--) {
+                const s = snake[i];
+                if (i === 0) {
+                    ctx.fillStyle = '#0f0';
+                    ctx.shadowColor = '#0f0';
+                    ctx.shadowBlur = 10;
+                } else {
+                    const t = i / snake.length;
+                    const g = Math.floor(200 - t * 100);
+                    ctx.fillStyle = 'rgb(0,' + g + ',0)';
+                    ctx.shadowBlur = 0;
+                }
+                ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function loop(now) {
+            if (alive) {
+                if (now - lastTick >= tickMs) {
+                    lastTick = now;
+                    step();
+                }
+                draw();
+            }
+            requestAnimationFrame(loop);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowUp': case 'w': case 'W': setDir(0, -1); e.preventDefault(); break;
+                case 'ArrowDown': case 's': case 'S': setDir(0, 1); e.preventDefault(); break;
+                case 'ArrowLeft': case 'a': case 'A': setDir(-1, 0); e.preventDefault(); break;
+                case 'ArrowRight': case 'd': case 'D': setDir(1, 0); e.preventDefault(); break;
+                case 'r': case 'R': reset(); break;
+            }
+        });
+
+        function bindBtn(id, fn) {
+            const el = document.getElementById(id);
+            const handler = (e) => { e.preventDefault(); fn(); };
+            el.addEventListener('touchstart', handler, {passive: false});
+            el.addEventListener('mousedown', handler);
+        }
+        bindBtn('upBtn',    () => setDir(0, -1));
+        bindBtn('downBtn',  () => setDir(0, 1));
+        bindBtn('leftBtn',  () => setDir(-1, 0));
+        bindBtn('rightBtn', () => setDir(1, 0));
+        bindBtn('restartBtn', () => reset());
+
+        let touchStart = null;
+        canvas.addEventListener('touchstart', (e) => {
+            const t = e.touches[0];
+            touchStart = {x: t.clientX, y: t.clientY};
+        }, {passive: true});
+        canvas.addEventListener('touchend', (e) => {
+            if (!touchStart) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - touchStart.x;
+            const dy = t.clientY - touchStart.y;
+            if (Math.abs(dx) < 15 && Math.abs(dy) < 15) return;
+            if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0);
+            else setDir(0, dy > 0 ? 1 : -1);
+            touchStart = null;
+        }, {passive: true});
+
+        reset();
+        requestAnimationFrame(loop);
+    })();
+    </script>
+</body>
+</html>
