@@ -174,25 +174,30 @@
             alive = true;
             scoreEl.textContent = score;
             levelEl.textContent = level;
+            gameOverEl.firstChild.textContent = 'GAME OVER';
+            gameOverEl.style.color = '#f00';
+            gameOverEl.style.borderColor = '#f00';
+            gameOverEl.style.textShadow = '0 0 8px #f00';
             gameOverEl.style.display = 'none';
             lastTick = performance.now();
         }
 
         function placeFood() {
-            while (true) {
-                const f = {
-                    x: Math.floor(Math.random() * COLS),
-                    y: Math.floor(Math.random() * ROWS)
-                };
-                if (!snake.some(s => s.x === f.x && s.y === f.y)) {
-                    food = f;
-                    return;
-                }
+            const occupied = new Set(snake.map(s => s.y * COLS + s.x));
+            const free = [];
+            for (let i = 0; i < COLS * ROWS; i++) {
+                if (!occupied.has(i)) free.push(i);
             }
+            if (!free.length) {
+                food = null;
+                return;
+            }
+            const pick = free[Math.floor(Math.random() * free.length)];
+            food = {x: pick % COLS, y: Math.floor(pick / COLS)};
         }
 
         function setDir(x, y) {
-            if (dir.x === -x && dir.y === -y) return;
+            if (nextDir.x === -x && nextDir.y === -y) return;
             nextDir = {x, y};
         }
 
@@ -203,14 +208,16 @@
             if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
                 return die();
             }
-            for (let i = 0; i < snake.length; i++) {
+            const willEat = food && head.x === food.x && head.y === food.y;
+            const checkLen = willEat ? snake.length : snake.length - 1;
+            for (let i = 0; i < checkLen; i++) {
                 if (snake[i].x === head.x && snake[i].y === head.y) {
                     return die();
                 }
             }
 
             snake.unshift(head);
-            if (head.x === food.x && head.y === food.y) {
+            if (willEat) {
                 score += 10;
                 scoreEl.textContent = score;
                 const newLevel = Math.floor(score / 50) + 1;
@@ -220,6 +227,7 @@
                     tickMs = Math.max(MIN_SPEED_MS, BASE_SPEED_MS - (level - 1) * SPEED_STEP_MS);
                 }
                 placeFood();
+                if (!food) return win();
             } else {
                 snake.pop();
             }
@@ -232,6 +240,20 @@
                 highEl.textContent = high;
                 try { localStorage.setItem('snakeHigh', String(high)); } catch (_) {}
             }
+            gameOverEl.style.display = 'block';
+        }
+
+        function win() {
+            alive = false;
+            if (score > high) {
+                high = score;
+                highEl.textContent = high;
+                try { localStorage.setItem('snakeHigh', String(high)); } catch (_) {}
+            }
+            gameOverEl.firstChild.textContent = 'YOU WIN!';
+            gameOverEl.style.color = '#0f0';
+            gameOverEl.style.borderColor = '#0f0';
+            gameOverEl.style.textShadow = '0 0 8px #0f0';
             gameOverEl.style.display = 'block';
         }
 
@@ -252,11 +274,13 @@
                 ctx.stroke();
             }
 
-            ctx.fillStyle = '#f33';
-            ctx.shadowColor = '#f00';
-            ctx.shadowBlur = 12;
-            ctx.fillRect(food.x * CELL + 2, food.y * CELL + 2, CELL - 4, CELL - 4);
-            ctx.shadowBlur = 0;
+            if (food) {
+                ctx.fillStyle = '#f33';
+                ctx.shadowColor = '#f00';
+                ctx.shadowBlur = 12;
+                ctx.fillRect(food.x * CELL + 2, food.y * CELL + 2, CELL - 4, CELL - 4);
+                ctx.shadowBlur = 0;
+            }
 
             for (let i = snake.length - 1; i >= 0; i--) {
                 const s = snake[i];
